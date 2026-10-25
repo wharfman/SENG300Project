@@ -25,7 +25,7 @@ class RoomTest {
     }
 
     @ParameterizedTest
-    @ValueSource(ints = {0, 101})
+    @ValueSource(ints = {-1, 0, 101})
     @DisplayName("Given a capacity outside 1-100, when a room is created, then it is rejected")
     void rejectsCapacityOutOfRange(int capacity) {
         assertThrows(ValidationException.class, () -> new Room("R01", "Lab", capacity, Set.of()));
@@ -34,9 +34,31 @@ class RoomTest {
     @Test
     @DisplayName("Given a name that is blank or over 60 characters after trimming, when a room is created, then it is rejected")
     void rejectsInvalidName() {
+        assertThrows(ValidationException.class, () -> new Room("R01", null, 5, Set.of()));
         assertThrows(ValidationException.class, () -> new Room("R01", "   ", 5, Set.of()));
         assertThrows(ValidationException.class, () -> new Room("R01", "a".repeat(61), 5, Set.of()));
-        assertEquals("a".repeat(60), new Room("R01", " " + "a".repeat(60) + " ", 5, Set.of()).name());
+    }
+
+    @ParameterizedTest
+    @ValueSource(ints = {1, 60})
+    @DisplayName("Given a name of 1 or 60 characters after trimming, when a room is created, then it is accepted trimmed")
+    void acceptsBoundaryNameLength(int length) {
+        String name = "a".repeat(length);
+
+        assertEquals(name, new Room("R01", "  " + name + "  ", 5, Set.of()).name());
+    }
+
+    @Test
+    @DisplayName("Given a blank ID, when a room is created, then it is rejected")
+    void rejectsBlankId() {
+        assertThrows(ValidationException.class, () -> new Room(null, "Lab", 5, Set.of()));
+        assertThrows(ValidationException.class, () -> new Room("  ", "Lab", 5, Set.of()));
+    }
+
+    @Test
+    @DisplayName("Given no feature list, when a room is created, then it has no features")
+    void nullFeaturesMeansNone() {
+        assertTrue(new Room("R01", "Lab", 5, null).features().isEmpty());
     }
 
     @Test

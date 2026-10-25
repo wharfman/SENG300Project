@@ -20,12 +20,21 @@ class StudentTest {
         assertEquals("ada@example.com", student.email());
     }
 
-    @Test
-    @DisplayName("Given a 100-character name, when a student is created, then it is accepted")
-    void acceptsMaxLengthName() {
-        String name = "a".repeat(100);
+    @ParameterizedTest
+    @ValueSource(ints = {1, 100})
+    @DisplayName("Given a name of 1 or 100 characters, when a student is created, then it is accepted")
+    void acceptsBoundaryNameLength(int length) {
+        String name = "a".repeat(length);
 
         assertEquals(name, new Student("S001", name, "a@b.c").name());
+    }
+
+    @Test
+    @DisplayName("Given a name over 100 characters only because of padding, when a student is created, then it is accepted trimmed")
+    void lengthIsMeasuredAfterTrimming() {
+        String name = "a".repeat(100);
+
+        assertEquals(name, new Student("S001", "   " + name + "   ", "a@b.c").name());
     }
 
     @ParameterizedTest
@@ -48,5 +57,20 @@ class StudentTest {
     @DisplayName("Given a malformed email, when a student is created, then it is rejected")
     void rejectsMalformedEmail(String email) {
         assertThrows(ValidationException.class, () -> new Student("S001", "Ada", email));
+    }
+
+    @ParameterizedTest
+    @ValueSource(strings = {"a@b", "first.last+tag@sub.example.com", " \tada@example.com\t "})
+    @DisplayName("Given a well-formed email, including the shortest possible or one with surrounding whitespace, when a student is created, then it is accepted")
+    void acceptsWellFormedEmail(String email) {
+        assertEquals(email.trim(), new Student("S001", "Ada", email).email());
+    }
+
+    @ParameterizedTest
+    @NullAndEmptySource
+    @ValueSource(strings = {"   "})
+    @DisplayName("Given a blank ID, when a student is created, then it is rejected")
+    void rejectsBlankId(String id) {
+        assertThrows(ValidationException.class, () -> new Student(id, "Ada", "a@b.c"));
     }
 }
