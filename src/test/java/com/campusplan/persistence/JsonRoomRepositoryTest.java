@@ -1,3 +1,9 @@
+/*
+ * JsonRoomRepositoryTest.java
+ *
+ * Unit tests for JsonRoomRepository: loading the seed catalogue and rejecting
+ * missing, corrupt, invalid, or duplicate room data.
+ */
 package com.campusplan.persistence;
 
 import com.campusplan.domain.Room;
@@ -15,8 +21,15 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Loading and validation of room catalogues by {@link JsonRoomRepository}. */
 class JsonRoomRepositoryTest {
 
+    /**
+     * Wraps JSON text as a UTF-8 stream, standing in for a catalogue file.
+     *
+     * @param text the JSON document
+     * @return a stream over its bytes
+     */
     private static InputStream json(String text) {
         return new ByteArrayInputStream(text.getBytes(StandardCharsets.UTF_8));
     }
