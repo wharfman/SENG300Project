@@ -1,3 +1,9 @@
+/*
+ * RoomCatalogueIntegrationTest.java
+ *
+ * Integration tests that run RoomService against the real seed catalogue
+ * loaded from JSON by JsonRoomRepository.
+ */
 package com.campusplan.application;
 
 import com.campusplan.domain.Room;
@@ -18,6 +24,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 class RoomCatalogueIntegrationTest {
     private final RoomService service = new RoomService(JsonRoomRepository.fromResource("/seed/rooms.json"));
 
+    /**
+     * Extracts room IDs so expectations stay short.
+     *
+     * @param rooms rooms returned by the service
+     * @return their IDs, in the same order
+     */
     private static List<String> ids(List<Room> rooms) {
         return rooms.stream().map(Room::id).toList();
     }

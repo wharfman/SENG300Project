@@ -1,3 +1,9 @@
+/*
+ * RoomTest.java
+ *
+ * Unit tests for Room field validation and feature matching,
+ * using boundary values and invalid-input partitions.
+ */
 package com.campusplan.domain;
 
 import org.junit.jupiter.api.DisplayName;
@@ -15,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/** Validation rules and feature matching of the {@link Room} record. */
 class RoomTest {
 
     @ParameterizedTest

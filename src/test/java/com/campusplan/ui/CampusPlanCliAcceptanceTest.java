@@ -1,3 +1,9 @@
+/*
+ * CampusPlanCliAcceptanceTest.java
+ *
+ * Acceptance tests for the FR-01 end-user scenarios, automated by typing
+ * operator input into the CLI menu and checking what it prints.
+ */
 package com.campusplan.ui;
 
 import com.campusplan.application.RoomService;
@@ -19,7 +25,13 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 /** End-user scenarios driven through the CLI menu, with the real seed room catalogue. */
 class CampusPlanCliAcceptanceTest {
 
-    /** Types each line into the CLI as the organizer would and returns everything it printed. */
+    /**
+     * Types each line into the CLI as the organizer would and returns everything it printed.
+     * Each session starts with no students; input ending quits the CLI.
+     *
+     * @param lines operator input, one entry per prompt
+     * @return the complete CLI output
+     */
     private static String session(String... lines) {
         StudentService students = new StudentService(new InMemoryStudentRepository());
         RoomService rooms = new RoomService(JsonRoomRepository.fromResource("/seed/rooms.json"));
@@ -29,7 +41,14 @@ class CampusPlanCliAcceptanceTest {
         return bytes.toString(StandardCharsets.UTF_8);
     }
 
-    /** The output printed after the last occurrence of {@code marker}. */
+    /**
+     * The output printed after the last occurrence of {@code marker}, used to check
+     * only the result of the final matching step.
+     *
+     * @param output complete CLI output
+     * @param marker text known to appear, typically a prompt
+     * @return the output from the last {@code marker} onward
+     */
     private static String after(String output, String marker) {
         return output.substring(output.lastIndexOf(marker));
     }

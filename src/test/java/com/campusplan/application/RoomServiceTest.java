@@ -1,3 +1,9 @@
+/*
+ * RoomServiceTest.java
+ *
+ * Unit tests for RoomService listing order and capacity/feature filtering,
+ * using a small fixed catalogue.
+ */
 package com.campusplan.application;
 
 import com.campusplan.domain.Room;
@@ -15,10 +21,12 @@ import static com.campusplan.domain.RoomFeature.WHITEBOARD;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/** {@link RoomService} listing and filtering over a three-room catalogue. */
 class RoomServiceTest {
     private final Room small = new Room("R01", "Small", 4, Set.of(WHITEBOARD));
     private final Room medium = new Room("R02", "Medium", 6, Set.of(WHITEBOARD, PROJECTOR));
     private final Room large = new Room("R03", "Large", 20, Set.of(ACCESSIBLE));
+    // The catalogue is deliberately out of ID order to show that results are sorted.
     private final RoomService service = new RoomService(() -> List.of(large, small, medium));
 
     @Test

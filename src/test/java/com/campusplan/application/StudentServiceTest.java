@@ -1,3 +1,9 @@
+/*
+ * StudentServiceTest.java
+ *
+ * Unit tests for StudentService: ID generation, email uniqueness, editing,
+ * lookup, and search, with error paths.
+ */
 package com.campusplan.application;
 
 import com.campusplan.domain.Student;
@@ -12,9 +18,12 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/** {@link StudentService} operations over in-memory storage, including rejected operations. */
 class StudentServiceTest {
+    /** Service under test, recreated empty for each test. */
     private StudentService service;
 
+    /** Starts each test with no students. */
     @BeforeEach
     void setUp() {
         service = new StudentService(new InMemoryStudentRepository());

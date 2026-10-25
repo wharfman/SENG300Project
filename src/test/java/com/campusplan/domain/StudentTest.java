@@ -1,3 +1,9 @@
+/*
+ * StudentTest.java
+ *
+ * Unit tests for Student field validation and normalization,
+ * using boundary values and invalid-input partitions.
+ */
 package com.campusplan.domain;
 
 import org.junit.jupiter.api.DisplayName;
@@ -9,6 +15,7 @@ import org.junit.jupiter.params.provider.ValueSource;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
+/** Validation and normalization rules of the {@link Student} record. */
 class StudentTest {
 
     @Test
