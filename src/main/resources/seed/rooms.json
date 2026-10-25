@@ -1,0 +1,9 @@
+[
+  { "id": "R01", "name": "Maple Hall 101", "capacity": 6, "features": ["WHITEBOARD"] },
+  { "id": "R02", "name": "Maple Hall 204", "capacity": 12, "features": ["WHITEBOARD", "PROJECTOR", "ACCESSIBLE"] },
+  { "id": "R03", "name": "Birch Study Room A", "capacity": 4, "features": [] },
+  { "id": "R04", "name": "Birch Study Room B", "capacity": 8, "features": ["WHITEBOARD", "ACCESSIBLE"] },
+  { "id": "R05", "name": "Cedar Lecture Room", "capacity": 40, "features": ["PROJECTOR", "ACCESSIBLE"] },
+  { "id": "R06", "name": "Aspen Seminar Room", "capacity": 20, "features": ["WHITEBOARD", "PROJECTOR"] },
+  { "id": "R07", "name": "Willow Lounge", "capacity": 5, "features": ["ACCESSIBLE"] }
+]
