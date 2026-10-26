@@ -132,6 +132,16 @@ class CampusPlanCliAcceptanceTest {
     }
 
     @Test
+    @DisplayName("Given a seed room with no features, when the organizer lists rooms, then its features show a dash")
+    void listRoomsShowsDashForNoFeatures() {
+        String roomLine = session("5", "0").lines()
+                .filter(line -> line.contains("Birch Study Room A"))
+                .findFirst().orElseThrow();
+
+        assertTrue(roomLine.endsWith("  -"));
+    }
+
+    @Test
     @DisplayName("Given the seed catalogue, when the organizer filters for six seats and a whiteboard, then only qualifying rooms are shown")
     void filterRooms() {
         String result = after(session("6", "6", "whiteboard", "0"), "Required features");
@@ -139,6 +149,28 @@ class CampusPlanCliAcceptanceTest {
         assertTrue(result.contains("Maple Hall 101"));
         assertTrue(result.contains("Aspen Seminar Room"));
         assertFalse(result.contains("Birch Study Room A"));
+        assertFalse(result.contains("Cedar Lecture Room"));
+    }
+
+    @Test
+    @DisplayName("Given the seed catalogue, when the organizer leaves capacity and features blank, then every room is shown")
+    void filterRoomsWithBlankCapacity() {
+        String result = after(session("6", "", "", "0"), "Required features");
+
+        for (String id : new String[] {"R01", "R02", "R03", "R04", "R05", "R06", "R07"}) {
+            assertTrue(result.contains(id), id);
+        }
+    }
+
+    @Test
+    @DisplayName("Given features with extra spaces, mixed case and repeats, when the organizer filters, then each counts once")
+    void filterRoomsWithMessyFeatures() {
+        String result = after(session("6", "", " Whiteboard ,whiteboard,, PROJECTOR ", "0"), "Required features");
+
+        assertFalse(result.contains("Error"));
+        assertTrue(result.contains("Maple Hall 204"));
+        assertTrue(result.contains("Aspen Seminar Room"));
+        assertFalse(result.contains("Maple Hall 101"));
         assertFalse(result.contains("Cedar Lecture Room"));
     }
 

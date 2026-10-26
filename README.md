@@ -18,6 +18,7 @@ Run these from the repository root.
 | Run one test class | `./mvnw test -Dtest=RoomServiceTest` |
 | Run one test method | `./mvnw test -Dtest=RoomServiceTest#filtersByCapacity` |
 | Run the application | `./mvnw -q compile exec:java -Dexec.mainClass=com.campusplan.Main` |
+| Generate the HTML test report into `target/reports/surefire.html` | `./mvnw clean test surefire-report:report-only` |
 | Package a jar into `target/` | `./mvnw package` |
 | Remove build output | `./mvnw clean` |
 
