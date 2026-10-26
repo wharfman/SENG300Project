@@ -1,0 +1,59 @@
+requirement_id,acceptance_scenario,issue,implementation_link,test_id,test_type,release,status
+FR-01,"UC-02 main flow: add student; name trimmed, email trimmed and lowercased",,src/main/java/com/campusplan/domain/Student.java,StudentTest#normalizesNameAndEmail,unit,P1,Pass
+FR-01,"UC-02 main flow: add student; next ID assigned",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#generatesSequentialIds,unit,P1,Pass
+FR-01,"UC-02 main flow: add student; prints Created message",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#addStudent,acceptance,P1,Pass
+FR-01,"UC-02 3a: name 1-100 characters after trimming (boundaries 1 and 100 accepted)",,src/main/java/com/campusplan/domain/Student.java,StudentTest#acceptsBoundaryNameLength,unit,P1,Pass
+FR-01,"UC-02 3a: name length measured after trimming",,src/main/java/com/campusplan/domain/Student.java,StudentTest#lengthIsMeasuredAfterTrimming,unit,P1,Pass
+FR-01,"UC-02 3a: name empty after trimming rejected",,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsBlankName,unit,P1,Pass
+FR-01,"UC-02 3a: 101-character name rejected",,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsTooLongName,unit,P1,Pass
+FR-01,"UC-02 3b: malformed email rejected",,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsMalformedEmail,unit,P1,Pass
+FR-01,"UC-02 3b: well-formed email accepted",,src/main/java/com/campusplan/domain/Student.java,StudentTest#acceptsWellFormedEmail,unit,P1,Pass
+FR-01,"UC-02 3a/3b: invalid add rejected, nothing saved, no ID used up",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsInvalidCreate,unit,P1,Pass
+FR-01,"UC-02 3a/3b: invalid name and email show Error messages",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#addStudentWithInvalidFields,acceptance,P1,Pass
+FR-01,"UC-02: blank student ID rejected",,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsBlankId,unit,P1,Pass
+FR-01,"UC-02 4a: duplicate email (different case and padding) rejected on add",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsDuplicateEmailOnCreate,unit,P1,Pass
+FR-01,"UC-02 4a: duplicate email on add shows Error message",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#addStudentWithDuplicateEmail,acceptance,P1,Pass
+FR-01,"UC-02 A1: search by partial name or email, ignoring case",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#searchesByPartialNameOrEmail,unit,P1,Pass
+FR-01,"UC-02 A1: blank search lists everyone; padding ignored",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#searchTrimsQuery,unit,P1,Pass
+FR-01,"UC-02 A1/A1a: search lists matches; no matches prints No students found.",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#searchStudents,acceptance,P1,Pass
+FR-01,"UC-02 A2: view student by ID, extra spaces ignored",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#getTrimsId,unit,P1,Pass
+FR-01,"UC-02 A2a/A3b: unknown ID rejected on view and edit",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsUnknownId,unit,P1,Pass
+FR-01,"UC-02 A2a/A3b: unknown ID shows Error before edit fields are asked",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#unknownStudentId,acceptance,P1,Pass
+FR-01,"UC-02 A3: edit keeps ID and stores new values",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#editKeepsId,unit,P1,Pass
+FR-01,"UC-02 A3: blank answer keeps current value; view shows update",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#editStudentKeepingBlankFields,acceptance,P1,Pass
+FR-01,"UC-02 A3: invalid name or email on edit rejected, student unchanged",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsInvalidEdit,unit,P1,Pass
+FR-01,"UC-02 A3: edit to another student's email rejected, student unchanged",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsDuplicateEmailOnEdit,unit,P1,Pass
+FR-01,"UC-02 A3: edit to another student's email shows Error, student unchanged",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#editStudentToDuplicateEmail,acceptance,P1,Pass
+FR-01,"UC-02 A3a: changing only the capitalization of own email is accepted",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#editMayKeepOwnEmail,unit,P1,Pass
+FR-01,"UC-03 main flow: filter by minimum capacity",,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#filtersByCapacity,unit,P1,Pass
+FR-01,"UC-03 main flow: filter by required features",,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#filtersByFeatures,unit,P1,Pass
+FR-01,"UC-03 main flow: capacity 6 + whiteboard on seed catalogue gives R01, R02, R04, R06 sorted by ID",,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#filtersSeedByCapacityAndFeature,integration,P1,Pass
+FR-01,"UC-03 main flow: filter requiring all features on seed catalogue",,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#filtersSeedByAllFeatures,integration,P1,Pass
+FR-01,"UC-03 main flow/3b: filter via CLI with lowercase feature name",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRooms,acceptance,P1,Pass
+FR-01,"UC-03 1a: list rooms sorted by ID",,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#listsAllById,unit,P1,Pass
+FR-01,"UC-03 1a: list every seed room in ID order",,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#listsSeedCatalogue,integration,P1,Pass
+FR-01,"UC-03 1a: list rooms via CLI shows capacity and features",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#listRooms,acceptance,P1,Pass
+FR-01,"UC-03 1a: rooms with no features show a dash",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#listRoomsShowsDashForNoFeatures,acceptance,P1,Pass
+FR-01,"UC-03 2a/3a: blank capacity and blank features list every room",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithBlankCapacity,acceptance,P1,Pass
+FR-01,"UC-03 3a: blank features require no features",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithNoMatch,acceptance,P1,Pass
+FR-01,"UC-03 3b: features with extra spaces, mixed case or repeated treated as one requirement",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithMessyFeatures,acceptance,P1,Pass
+FR-01,"UC-03 4a: no rooms match",,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#filterWithNoMatch,unit,P1,Pass
+FR-01,"UC-03 4a: filtering above the largest seed room returns nothing",,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#filtersSeedAboveLargestRoom,integration,P1,Pass
+FR-01,"UC-03 4a: no match prints No rooms match.",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithNoMatch,acceptance,P1,Pass
+FR-01,"UC-03 2c: minimum capacity below 1 rejected",,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#rejectsInvalidCapacity,unit,P1,Pass
+FR-01,"UC-03 2b/2c/3c: non-numeric capacity, capacity 0, unknown feature show Error messages",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithInvalidInput,acceptance,P1,Pass
+FR-01,"UC-03: room has features only when it has every required one",,src/main/java/com/campusplan/domain/Room.java,RoomTest#hasFeaturesChecksSubset,unit,P1,Pass
+FR-01,"Menu: unknown option reported; end of input quits",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#unknownOptionAndEndOfInput,acceptance,P1,Pass
+FR-03,"UC-01 step 2 (required by FR-01 room search): seed catalogue loads with varied capacities and every feature",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#loadsSeedCatalogue,integration,P1,Pass
+FR-03,"UC-01 step 2 (required by FR-01 room search): room fields read from JSON",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#readsFields,integration,P1,Pass
+FR-03,"UC-01 step 2 (required by FR-01 room search): room capacity 1 and 100 accepted",,src/main/java/com/campusplan/domain/Room.java,RoomTest#acceptsBoundaryCapacity,unit,P1,Pass
+FR-03,"UC-01 step 2 (required by FR-01 room search): room name of 1 and 60 characters accepted, trimmed",,src/main/java/com/campusplan/domain/Room.java,RoomTest#acceptsBoundaryNameLength,unit,P1,Pass
+FR-03,"UC-01 step 2 (required by FR-01 room search): room with no feature list has no features",,src/main/java/com/campusplan/domain/Room.java,RoomTest#nullFeaturesMeansNone,unit,P1,Pass
+FR-03,"UC-01 2a (required by FR-01 room search): missing catalogue raises storage error",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsMissingResource,integration,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): room capacity -1, 0, 101 rejected",,src/main/java/com/campusplan/domain/Room.java,RoomTest#rejectsCapacityOutOfRange,unit,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): room name blank or over 60 characters rejected",,src/main/java/com/campusplan/domain/Room.java,RoomTest#rejectsInvalidName,unit,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): blank room ID rejected",,src/main/java/com/campusplan/domain/Room.java,RoomTest#rejectsBlankId,unit,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): invalid capacity or unknown feature in JSON rejected",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsInvalidRoom,integration,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): malformed or empty JSON rejected",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsCorruptJson,integration,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): duplicate room ID rejected",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsDuplicateId,integration,P1,Pass
+FR-03,"UC-01 2b (required by FR-01 room search): duplicate room name ignoring case rejected",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsDuplicateNameIgnoringCase,integration,P1,Pass
