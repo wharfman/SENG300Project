@@ -1,4 +1,5 @@
 # Maven build output
 target/
 
-
+# Runtime data written by the application
+data/

@@ -6,8 +6,13 @@
  */
 package com.campusplan.ui;
 
+import com.campusplan.application.AvailabilityService;
+import com.campusplan.application.EventService;
 import com.campusplan.application.RoomService;
+import com.campusplan.application.SeedLoader;
 import com.campusplan.application.StudentService;
+import com.campusplan.persistence.InMemoryAvailabilityRepository;
+import com.campusplan.persistence.InMemoryEventRepository;
 import com.campusplan.persistence.InMemoryStudentRepository;
 import com.campusplan.persistence.JsonRoomRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -35,9 +40,12 @@ class CampusPlanCliAcceptanceTest {
     private static String session(String... lines) {
         StudentService students = new StudentService(new InMemoryStudentRepository());
         RoomService rooms = new RoomService(JsonRoomRepository.fromResource("/seed/rooms.json"));
+        AvailabilityService availability = new AvailabilityService(new InMemoryAvailabilityRepository(), students);
+        EventService events = new EventService(new InMemoryEventRepository(), students);
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         BufferedReader in = new BufferedReader(new StringReader(String.join("\n", lines) + "\n"));
-        new CampusPlanCli(students, rooms, in, new PrintStream(bytes, true, StandardCharsets.UTF_8)).run();
+        new CampusPlanCli(students, rooms, availability, events, SeedLoader.NONE, in,
+                new PrintStream(bytes, true, StandardCharsets.UTF_8)).run();
         return bytes.toString(StandardCharsets.UTF_8);
     }
 
@@ -189,11 +197,20 @@ class CampusPlanCliAcceptanceTest {
     }
 
     @Test
+    @DisplayName("Given piped input that starts with a UTF-8 byte-order mark, when the first option is read, then the mark is ignored")
+    void ignoresByteOrderMark() {
+        String output = session("﻿1", "Ada", "ada@example.com", "0");
+
+        assertTrue(output.contains("Created S001  Ada <ada@example.com>"));
+        assertFalse(output.contains("Unknown option"));
+    }
+
+    @Test
     @DisplayName("Given the menu, when the organizer picks an unknown option or input ends, then the CLI reports it and exits cleanly")
     void unknownOptionAndEndOfInput() {
-        String output = session("9");
+        String output = session("99");
 
-        assertTrue(output.contains("Unknown option: 9"));
+        assertTrue(output.contains("Unknown option: 99"));
         assertTrue(output.contains("Goodbye."));
     }
 }
