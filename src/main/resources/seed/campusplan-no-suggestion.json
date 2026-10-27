@@ -64,63 +64,63 @@
   "students": [
     {
       "id": "S001",
-      "name": "Ada Lovelace",
-      "email": "ada.lovelace@campusplan.example"
+      "name": "Amira Castell",
+      "email": "amira.castell@campusplan.example"
     },
     {
       "id": "S002",
-      "name": "Grace Hopper",
-      "email": "grace.hopper@campusplan.example"
+      "name": "Jonah Whitfield",
+      "email": "jonah.whitfield@campusplan.example"
     },
     {
       "id": "S003",
-      "name": "Alan Turing",
-      "email": "alan.turing@campusplan.example"
+      "name": "Priya Ramanathan",
+      "email": "priya.ramanathan@campusplan.example"
     },
     {
       "id": "S004",
-      "name": "Katherine Johnson",
-      "email": "katherine.johnson@campusplan.example"
+      "name": "Tomas Okafor",
+      "email": "tomas.okafor@campusplan.example"
     },
     {
       "id": "S005",
-      "name": "Edsger Dijkstra",
-      "email": "edsger.dijkstra@campusplan.example"
+      "name": "Lena Brightwater",
+      "email": "lena.brightwater@campusplan.example"
     },
     {
       "id": "S006",
-      "name": "Barbara Liskov",
-      "email": "barbara.liskov@campusplan.example"
+      "name": "Mateo Silvan",
+      "email": "mateo.silvan@campusplan.example"
     },
     {
       "id": "S007",
-      "name": "Donald Knuth",
-      "email": "donald.knuth@campusplan.example"
+      "name": "Hana Morrow",
+      "email": "hana.morrow@campusplan.example"
     },
     {
       "id": "S008",
-      "name": "Margaret Hamilton",
-      "email": "margaret.hamilton@campusplan.example"
+      "name": "Kofi Delacroix",
+      "email": "kofi.delacroix@campusplan.example"
     },
     {
       "id": "S009",
-      "name": "Tim Berners-Lee",
-      "email": "tim.bernerslee@campusplan.example"
+      "name": "Ines Varga",
+      "email": "ines.varga@campusplan.example"
     },
     {
       "id": "S010",
-      "name": "Radia Perlman",
-      "email": "radia.perlman@campusplan.example"
+      "name": "Ravi Ashdown",
+      "email": "ravi.ashdown@campusplan.example"
     },
     {
       "id": "S011",
-      "name": "Linus Torvalds",
-      "email": "linus.torvalds@campusplan.example"
+      "name": "Saoirse Quill",
+      "email": "saoirse.quill@campusplan.example"
     },
     {
       "id": "S012",
-      "name": "Frances Allen",
-      "email": "frances.allen@campusplan.example"
+      "name": "Yusuf Tamberlane",
+      "email": "yusuf.tamberlane@campusplan.example"
     }
   ],
   "availability": [

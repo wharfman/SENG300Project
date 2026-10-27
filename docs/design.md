@@ -249,7 +249,7 @@ All data is stored in one UTF-8 JSON file, by default `data/campusplan.json`:
 {
   "formatVersion": 1,
   "rooms": [ { "id": "R01", "name": "Maple Hall 101", "capacity": 6, "features": ["WHITEBOARD"] } ],
-  "students": [ { "id": "S001", "name": "Ada Lovelace", "email": "ada.lovelace@campusplan.example" } ],
+  "students": [ { "id": "S001", "name": "Amira Castell", "email": "amira.castell@campusplan.example" } ],
   "availability": [ { "studentId": "S001", "intervals": [ { "date": "2026-11-02", "start": "09:00", "end": "11:00" } ] } ],
   "events": [ { "id": "E001", "title": "Capstone project meeting", "inviteeIds": ["S001", "S002"],
                 "firstDay": "2026-11-02", "lastDay": "2026-11-04", "durationMinutes": 120,
