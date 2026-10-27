@@ -1,4 +1,4 @@
-# CampusPlan Project Plan
+﻿# CampusPlan Project Plan
 
 Fill in every `[Member X]` placeholder with a team member's name before exporting to `plan.pdf`. Use the same letter for the same person throughout.
 
@@ -150,7 +150,7 @@ Held on: [date]. Present: [names].
 
 **Facts from P1 to discuss** (from the repository history):
 
-- The repository was created on 20 October. FR-01 was merged on 25 October, and FR-02 and FR-03 were implemented on 27 October, after the 24 October due date.
+- The repository was created on 20 October. FR-01 was merged on 25 October, and FR-02 and FR-03 were implemented on 26 October, after the 24 October due date.
 - Checking the code against `Requirements.pdf` late in P1 found ten acceptance criteria the code did not yet meet. All were fixed before release, and one requirement (reset to sample data) was removed because it contradicted the brief.
 - One defect was found by running the real application rather than the tests: piped input starting with a byte-order mark shifted every menu answer. It was fixed with a regression test.
 - A member's default JDK was 17, while the project needs 21.
