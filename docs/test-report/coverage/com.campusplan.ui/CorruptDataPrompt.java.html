@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CorruptDataPrompt.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.ui</a> &gt; <span class="el_source">CorruptDataPrompt.java</span></div><h1>CorruptDataPrompt.java</h1><pre class="source lang-java linenums">/*
+ * CorruptDataPrompt.java
+ *
+ * User-interface layer: the startup question shown when the saved data file cannot
+ * be loaded, letting the organizer quit or set the file aside and start empty.
+ */
+package com.campusplan.ui;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UncheckedIOException;
+import java.nio.file.Path;
+
+/**
+ * Asks what to do about an unreadable data file. Quitting is the default; setting the file
+ * aside needs the operator to type YES. This class only asks; the caller acts on the answer.
+ */
+public class CorruptDataPrompt {
+
+    /** Operator input. */
+    private final BufferedReader in;
+    /** Prompts and messages. */
+    private final PrintStream out;
+
+    /**
+     * Creates a prompt over the given streams.
+     *
+     * @param in  operator input
+     * @param out destination for prompts and messages
+     */
+<span class="fc" id="L32">    public CorruptDataPrompt(BufferedReader in, PrintStream out) {</span>
+<span class="fc" id="L33">        this.in = in;</span>
+<span class="fc" id="L34">        this.out = out;</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Reports the problem and asks whether to set the file aside.
+     *
+     * @param error the operator-facing description of what is wrong
+     * @param file  the data file that could not be loaded
+     * @return true only if the operator chose to set the file aside and typed YES to confirm
+     */
+    public boolean askToSetAside(String error, Path file) {
+<span class="fc" id="L45">        out.println(&quot;Error: &quot; + error);</span>
+<span class="fc" id="L46">        out.println(&quot;  1. Quit and leave the file unchanged (default)&quot;);</span>
+<span class="fc" id="L47">        out.println(&quot;  2. Set the file aside and start with no data&quot;);</span>
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        if (!&quot;2&quot;.equals(read(&quot;Choose an option&quot;))) {</span>
+<span class="fc" id="L49">            out.println(&quot;Data file left unchanged. Goodbye.&quot;);</span>
+<span class="fc" id="L50">            return false;</span>
+        }
+<span class="fc" id="L52">        out.println(file.getFileName() + &quot; will be renamed, with its contents kept, and CampusPlan will start empty.&quot;);</span>
+<span class="fc bfc" id="L53" title="All 2 branches covered.">        if (!&quot;YES&quot;.equals(read(&quot;Type YES to confirm&quot;))) {</span>
+<span class="fc" id="L54">            out.println(&quot;Data file left unchanged. Goodbye.&quot;);</span>
+<span class="fc" id="L55">            return false;</span>
+        }
+<span class="fc" id="L57">        return true;</span>
+    }
+
+    /**
+     * Prints a prompt and reads one trimmed line; end of input counts as an empty answer.
+     *
+     * @param label prompt text, without the trailing colon
+     * @return the trimmed answer
+     * @throws UncheckedIOException if reading input fails
+     */
+    private String read(String label) {
+<span class="fc" id="L68">        out.print(label + &quot;: &quot;);</span>
+<span class="fc" id="L69">        out.flush();</span>
+        try {
+<span class="fc" id="L71">            String line = in.readLine();</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">            return line == null ? &quot;&quot; : line.replace(&quot;﻿&quot;, &quot;&quot;).trim();</span>
+<span class="nc" id="L73">        } catch (IOException e) {</span>
+<span class="nc" id="L74">            throw new UncheckedIOException(e);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

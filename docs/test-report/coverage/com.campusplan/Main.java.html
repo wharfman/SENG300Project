@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Main.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan</a> &gt; <span class="el_source">Main.java</span></div><h1>Main.java</h1><pre class="source lang-java linenums">/*
+ * Main.java
+ *
+ * Application entry point: opens the data file, wires the layers together,
+ * and starts the command-line interface.
+ */
+package com.campusplan;
+
+import com.campusplan.application.AvailabilityService;
+import com.campusplan.application.EventService;
+import com.campusplan.application.RoomService;
+import com.campusplan.application.SeedLoader;
+import com.campusplan.application.StudentService;
+import com.campusplan.domain.Room;
+import com.campusplan.persistence.JsonDataStore;
+import com.campusplan.persistence.JsonRoomRepository;
+import com.campusplan.persistence.StorageException;
+import com.campusplan.ui.CampusPlanCli;
+import com.campusplan.ui.CorruptDataPrompt;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Path;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+
+/** Starts CampusPlan. Not instantiable. */
+public final class Main {
+
+    /** Classpath location of the built-in room catalogue, used when there is no data file yet. */
+    private static final String ROOM_CATALOGUE = &quot;/seed/rooms.json&quot;;
+
+    /** Sample datasets offered when the application starts empty, by description, in the order offered. */
+<span class="nc" id="L38">    private static final Map&lt;String, String&gt; SAMPLES = new LinkedHashMap&lt;&gt;();</span>
+
+    static {
+<span class="nc" id="L41">        SAMPLES.put(&quot;Sample data where a meeting can be scheduled&quot;, &quot;/seed/campusplan-sample.json&quot;);</span>
+<span class="nc" id="L42">        SAMPLES.put(&quot;Sample data where no meeting can be scheduled&quot;, &quot;/seed/campusplan-no-suggestion.json&quot;);</span>
+    }
+
+    /** Data file used when no path is given on the command line. */
+<span class="nc" id="L46">    private static final Path DEFAULT_DATA_FILE = Path.of(&quot;data&quot;, &quot;campusplan.json&quot;);</span>
+
+    /** Prevents instantiation. */
+    private Main() {
+    }
+
+    /**
+     * Opens the data file and runs the CLI until the operator quits.
+     * Exits with status 1 if the room catalogue cannot be loaded, or if the data file cannot be
+     * loaded and the operator does not set it aside; the data file is then left unchanged.
+     *
+     * @param args optional path of the data file; defaults to {@code data/campusplan.json}
+     */
+    public static void main(String[] args) {
+<span class="nc bnc" id="L60" title="All 2 branches missed.">        Path dataFile = args.length &gt; 0 ? Path.of(args[0]) : DEFAULT_DATA_FILE;</span>
+<span class="nc" id="L61">        BufferedReader in = new BufferedReader(new InputStreamReader(System.in, StandardCharsets.UTF_8));</span>
+        JsonDataStore store;
+        try {
+<span class="nc" id="L64">            List&lt;Room&gt; catalogue = JsonRoomRepository.fromResource(ROOM_CATALOGUE).findAll();</span>
+<span class="nc" id="L65">            store = openOrRecover(dataFile, catalogue, in);</span>
+<span class="nc" id="L66">        } catch (StorageException e) {</span>
+<span class="nc" id="L67">            System.err.println(&quot;Error: &quot; + e.getMessage());</span>
+<span class="nc" id="L68">            System.exit(1);</span>
+<span class="nc" id="L69">            return; // unreachable, but lets the compiler see that store is assigned below</span>
+<span class="nc" id="L70">        }</span>
+<span class="nc bnc" id="L71" title="All 2 branches missed.">        if (store == null) {</span>
+<span class="nc" id="L72">            System.exit(1);</span>
+<span class="nc" id="L73">            return;</span>
+        }
+<span class="nc" id="L75">        System.out.println(&quot;Data file: &quot; + dataFile.toAbsolutePath());</span>
+
+<span class="nc" id="L77">        StudentService students = new StudentService(store.students());</span>
+<span class="nc" id="L78">        new CampusPlanCli(students,</span>
+<span class="nc" id="L79">                new RoomService(store.rooms()),</span>
+<span class="nc" id="L80">                new AvailabilityService(store.availability(), students),</span>
+<span class="nc" id="L81">                new EventService(store.events(), students),</span>
+<span class="nc" id="L82">                seedLoader(store), in, System.out).run();</span>
+<span class="nc" id="L83">    }</span>
+
+    /**
+     * Opens the data file. If it cannot be loaded, asks the operator whether to set it aside and start empty.
+     *
+     * @param dataFile  the data file
+     * @param catalogue rooms to use when there is no data file
+     * @param in        operator input
+     * @return the opened store, or null if the operator chose to quit
+     * @throws StorageException if the file cannot be set aside
+     */
+    private static JsonDataStore openOrRecover(Path dataFile, List&lt;Room&gt; catalogue, BufferedReader in) {
+        try {
+<span class="nc" id="L96">            return JsonDataStore.open(dataFile, catalogue);</span>
+<span class="nc" id="L97">        } catch (StorageException e) {</span>
+<span class="nc bnc" id="L98" title="All 2 branches missed.">            if (!new CorruptDataPrompt(in, System.out).askToSetAside(e.getMessage(), dataFile)) {</span>
+<span class="nc" id="L99">                return null;</span>
+            }
+<span class="nc" id="L101">            Path aside = JsonDataStore.setAside(dataFile);</span>
+<span class="nc" id="L102">            System.out.println(&quot;Moved the old data file to &quot; + aside.toAbsolutePath());</span>
+<span class="nc" id="L103">            return JsonDataStore.open(dataFile, catalogue);</span>
+        }
+    }
+
+    /**
+     * Offers the bundled sample datasets while the store is empty.
+     *
+     * @param store the opened data store
+     * @return a loader over {@link #SAMPLES}
+     */
+    private static SeedLoader seedLoader(JsonDataStore store) {
+<span class="nc" id="L114">        return new SeedLoader() {</span>
+            @Override
+            public boolean canLoad() {
+<span class="nc" id="L117">                return store.isEmpty();</span>
+            }
+
+            @Override
+            public List&lt;String&gt; datasets() {
+<span class="nc" id="L122">                return List.copyOf(SAMPLES.keySet());</span>
+            }
+
+            @Override
+            public void load(String dataset) {
+<span class="nc" id="L127">                String resource = SAMPLES.get(dataset);</span>
+<span class="nc bnc" id="L128" title="All 2 branches missed.">                try (InputStream seed = resource == null ? null : Main.class.getResourceAsStream(resource)) {</span>
+<span class="nc bnc" id="L129" title="All 2 branches missed.">                    if (seed == null) {</span>
+<span class="nc" id="L130">                        throw new StorageException(&quot;Sample data not found: &quot; + dataset);</span>
+                    }
+<span class="nc" id="L132">                    store.loadSeed(seed);</span>
+<span class="nc" id="L133">                } catch (IOException e) {</span>
+<span class="nc" id="L134">                    throw new StorageException(&quot;Could not read sample data: &quot; + e.getMessage(), e);</span>
+<span class="nc" id="L135">                }</span>
+<span class="nc" id="L136">            }</span>
+        };
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

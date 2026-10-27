@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Event.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.domain</a> &gt; <span class="el_source">Event.java</span></div><h1>Event.java</h1><pre class="source lang-java linenums">/*
+ * Event.java
+ *
+ * Domain model for an event: its planning details, status, and one attendance
+ * response per invitee.
+ */
+package com.campusplan.domain;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
+
+/**
+ * An event being planned. Every invitee has exactly one response, listed in invitee order.
+ * Only a {@link EventStatus#DRAFT} can have its details edited.
+ *
+ * &lt;p&gt;Instances are immutable; editing an event means creating a new instance with the same ID.
+ * The room and start/end time of a scheduled event are added with scheduling in P2 (FR-05).
+ *
+ * @param id        generated identifier, never blank
+ * @param details   the planning fields
+ * @param status    where the event is in its life cycle
+ * @param responses each invitee's reply, keyed by student ID
+ */
+public record Event(String id, EventDetails details, EventStatus status,
+                    Map&lt;String, AttendanceResponse&gt; responses) {
+
+    /**
+     * Validates every field and checks that responses match the invitees exactly.
+     *
+     * @throws ValidationException if a field is missing or the responses do not match the invitees
+     */
+<span class="fc" id="L35">    public Event {</span>
+<span class="pc bpc" id="L36" title="1 of 4 branches missed.">        if (id == null || id.isBlank()) {</span>
+<span class="fc" id="L37">            throw new ValidationException(&quot;Event ID is required.&quot;);</span>
+        }
+<span class="pc bpc" id="L39" title="2 of 6 branches missed.">        if (details == null || status == null || responses == null) {</span>
+<span class="fc" id="L40">            throw new ValidationException(&quot;Event details, status, and responses are required.&quot;);</span>
+        }
+<span class="fc bfc" id="L42" title="All 2 branches covered.">        if (!responses.keySet().equals(Set.copyOf(details.inviteeIds()))</span>
+                // Not containsValue(null): immutable maps such as Map.of throw on a null argument.
+<span class="pc bpc" id="L44" title="1 of 2 branches missed.">                || responses.values().stream().anyMatch(Objects::isNull)) {</span>
+<span class="fc" id="L45">            throw new ValidationException(&quot;Event &quot; + id + &quot; must have exactly one response per invitee.&quot;);</span>
+        }
+        // Copy in invitee order so listings follow the order the organizer entered.
+<span class="fc" id="L48">        Map&lt;String, AttendanceResponse&gt; ordered = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc bfc" id="L49" title="All 2 branches covered.">        for (String invitee : details.inviteeIds()) {</span>
+<span class="fc" id="L50">            ordered.put(invitee, responses.get(invitee));</span>
+<span class="fc" id="L51">        }</span>
+<span class="fc" id="L52">        responses = Collections.unmodifiableMap(ordered);</span>
+<span class="fc" id="L53">    }</span>
+
+    /**
+     * Creates a new draft where every invitee's response is PENDING.
+     *
+     * @param id      the event ID
+     * @param details the planning fields
+     * @return the draft event
+     * @throws ValidationException if the ID is blank or the details are missing
+     */
+    public static Event draft(String id, EventDetails details) {
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        if (details == null) {</span>
+<span class="fc" id="L65">            throw new ValidationException(&quot;Event details are required.&quot;);</span>
+        }
+<span class="fc" id="L67">        return new Event(id, details, EventStatus.DRAFT, pending(details));</span>
+    }
+
+    /**
+     * Returns a copy of this draft with new planning fields. Invitees who stay keep their
+     * response, new invitees start PENDING, and removed invitees lose theirs.
+     *
+     * @param newDetails the replacement planning fields
+     * @return the edited draft, with the same ID
+     * @throws ValidationException if this event is not a draft or the details are missing
+     */
+    public Event withDetails(EventDetails newDetails) {
+<span class="fc bfc" id="L79" title="All 2 branches covered.">        if (status != EventStatus.DRAFT) {</span>
+<span class="fc" id="L80">            throw new ValidationException(&quot;Only DRAFT events can be edited; event &quot; + id + &quot; is &quot; + status + &quot;.&quot;);</span>
+        }
+<span class="pc bpc" id="L82" title="1 of 2 branches missed.">        if (newDetails == null) {</span>
+<span class="nc" id="L83">            throw new ValidationException(&quot;Event details are required.&quot;);</span>
+        }
+<span class="fc" id="L85">        Map&lt;String, AttendanceResponse&gt; kept = pending(newDetails);</span>
+<span class="fc" id="L86">        kept.replaceAll((invitee, pending) -&gt; responses.getOrDefault(invitee, pending));</span>
+<span class="fc" id="L87">        return new Event(id, newDetails, status, kept);</span>
+    }
+
+    /**
+     * Builds a PENDING response for every invitee.
+     *
+     * @param details the planning fields
+     * @return responses keyed by invitee ID
+     */
+    private static Map&lt;String, AttendanceResponse&gt; pending(EventDetails details) {
+<span class="fc" id="L97">        Map&lt;String, AttendanceResponse&gt; responses = new LinkedHashMap&lt;&gt;();</span>
+<span class="fc" id="L98">        details.inviteeIds().forEach(invitee -&gt; responses.put(invitee, AttendanceResponse.PENDING));</span>
+<span class="fc" id="L99">        return responses;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

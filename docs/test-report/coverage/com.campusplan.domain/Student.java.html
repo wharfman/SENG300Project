@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Student.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.domain</a> &gt; <span class="el_source">Student.java</span></div><h1>Student.java</h1><pre class="source lang-java linenums">/*
+ * Student.java
+ *
+ * Domain model for a student who can be invited to events, including the
+ * validation rules for student names and emails.
+ */
+package com.campusplan.domain;
+
+import java.util.Locale;
+
+/**
+ * A student. The name is stored trimmed and the email trimmed and lowercased,
+ * so two students' emails can be compared directly.
+ *
+ * &lt;p&gt;Instances are immutable; editing a student means creating a new instance
+ * with the same ID.
+ *
+ * @param id    generated identifier, never blank
+ * @param name  display name, 1-100 characters after trimming
+ * @param email contact email with exactly one {@code @}, text on both sides, and no whitespace
+ */
+public record Student(String id, String name, String email) {
+
+    /** Maximum length of a student name, measured after trimming. */
+    public static final int MAX_NAME_LENGTH = 100;
+
+    /**
+     * Validates and normalizes every field.
+     *
+     * @throws ValidationException if the ID is blank, or the name or email is invalid
+     */
+<span class="fc" id="L32">    public Student {</span>
+<span class="fc bfc" id="L33" title="All 4 branches covered.">        if (id == null || id.isBlank()) {</span>
+<span class="fc" id="L34">            throw new ValidationException(&quot;Student ID is required.&quot;);</span>
+        }
+<span class="fc" id="L36">        name = validateName(name);</span>
+<span class="fc" id="L37">        email = normalizeEmail(email);</span>
+<span class="fc" id="L38">    }</span>
+
+    /**
+     * Trims a name and checks its length.
+     *
+     * @param name the name as entered, possibly null
+     * @return the trimmed name
+     * @throws ValidationException if the trimmed name is empty or too long
+     */
+    private static String validateName(String name) {
+<span class="fc bfc" id="L48" title="All 2 branches covered.">        String trimmed = name == null ? &quot;&quot; : name.trim();</span>
+<span class="fc bfc" id="L49" title="All 4 branches covered.">        if (trimmed.isEmpty() || trimmed.length() &gt; MAX_NAME_LENGTH) {</span>
+<span class="fc" id="L50">            throw new ValidationException(</span>
+                    &quot;Student name must be 1-&quot; + MAX_NAME_LENGTH + &quot; characters after trimming.&quot;);
+        }
+<span class="fc" id="L53">        return trimmed;</span>
+    }
+
+    /**
+     * Trims and lowercases an email and checks its format.
+     *
+     * @param email the email as entered, possibly null
+     * @return the normalized email
+     * @throws ValidationException if the email is malformed
+     */
+    private static String normalizeEmail(String email) {
+<span class="fc bfc" id="L64" title="All 2 branches covered.">        String normalized = email == null ? &quot;&quot; : email.trim().toLowerCase(Locale.ROOT);</span>
+<span class="fc" id="L65">        int at = normalized.indexOf('@');</span>
+        // Valid only if there is one @, it is neither first nor last, and no whitespace remains inside.
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        boolean valid = at &gt; 0</span>
+<span class="fc bfc" id="L68" title="All 2 branches covered.">                &amp;&amp; at == normalized.lastIndexOf('@')</span>
+<span class="fc bfc" id="L69" title="All 2 branches covered.">                &amp;&amp; at &lt; normalized.length() - 1</span>
+<span class="fc bfc" id="L70" title="All 2 branches covered.">                &amp;&amp; normalized.chars().noneMatch(Character::isWhitespace);</span>
+<span class="fc bfc" id="L71" title="All 2 branches covered.">        if (!valid) {</span>
+<span class="fc" id="L72">            throw new ValidationException(</span>
+                    &quot;Email must contain exactly one @, text on both sides, and no whitespace.&quot;);
+        }
+<span class="fc" id="L75">        return normalized;</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

@@ -1,0 +1,117 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>AvailabilityService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.application</a> &gt; <span class="el_source">AvailabilityService.java</span></div><h1>AvailabilityService.java</h1><pre class="source lang-java linenums">/*
+ * AvailabilityService.java
+ *
+ * Application-layer service for the availability workflows: add, remove, and view
+ * a student's free time, and check whether a student is free for an event.
+ */
+package com.campusplan.application;
+
+import com.campusplan.domain.Availability;
+import com.campusplan.domain.AvailabilityInterval;
+import com.campusplan.domain.ValidationException;
+import com.campusplan.persistence.AvailabilityRepository;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.List;
+
+/**
+ * Availability operations used by the user interface. Interval rules are checked by
+ * {@link AvailabilityInterval} and merging by {@link Availability}; this class adds the check
+ * that the student exists. A rejected operation leaves storage unchanged.
+ *
+ * &lt;p&gt;Rejecting edits that would invalidate ACCEPTED attendance is planned for P2 (FR-06),
+ * when attendance responses are recorded.
+ */
+public class AvailabilityService {
+
+    /** Where availability is stored. */
+    private final AvailabilityRepository repository;
+
+    /** Used to check that a student exists before their availability is touched. */
+    private final StudentService students;
+
+    /**
+     * Creates a service over the given storage.
+     *
+     * @param repository availability storage
+     * @param students   student lookup
+     */
+<span class="fc" id="L40">    public AvailabilityService(AvailabilityRepository repository, StudentService students) {</span>
+<span class="fc" id="L41">        this.repository = repository;</span>
+<span class="fc" id="L42">        this.students = students;</span>
+<span class="fc" id="L43">    }</span>
+
+    /**
+     * Adds free time for a student, merging it with any overlapping or adjacent interval.
+     *
+     * @param studentId the student ID as entered
+     * @param date      date of the free time
+     * @param start     start time
+     * @param end       end time
+     * @return the student's stored availability after the change
+     * @throws ValidationException if no student has the ID or the interval is invalid
+     */
+    public List&lt;AvailabilityInterval&gt; add(String studentId, LocalDate date, LocalTime start, LocalTime end) {
+<span class="fc" id="L56">        Availability current = current(studentId);</span>
+<span class="fc" id="L57">        Availability updated = current.with(new AvailabilityInterval(date, start, end));</span>
+<span class="fc" id="L58">        repository.save(updated);</span>
+<span class="fc" id="L59">        return updated.intervals();</span>
+    }
+
+    /**
+     * Removes free time for a student, trimming or splitting any interval it overlaps.
+     *
+     * @param studentId the student ID as entered
+     * @param date      date of the time to remove
+     * @param start     start time
+     * @param end       end time
+     * @return the student's stored availability after the change
+     * @throws ValidationException if no student has the ID, the interval is invalid,
+     *                             or the student has no availability overlapping it
+     */
+    public List&lt;AvailabilityInterval&gt; remove(String studentId, LocalDate date, LocalTime start, LocalTime end) {
+<span class="fc" id="L74">        Availability current = current(studentId);</span>
+<span class="fc" id="L75">        Availability updated = current.without(new AvailabilityInterval(date, start, end));</span>
+<span class="fc" id="L76">        repository.save(updated);</span>
+<span class="fc" id="L77">        return updated.intervals();</span>
+    }
+
+    /**
+     * Returns a student's free time.
+     *
+     * @param studentId the student ID as entered
+     * @return the merged intervals, sorted by date and start; empty if none were entered
+     * @throws ValidationException if no student has the ID
+     */
+    public List&lt;AvailabilityInterval&gt; get(String studentId) {
+<span class="fc" id="L88">        return current(studentId).intervals();</span>
+    }
+
+    /**
+     * Whether a student is free for the whole of an event's time.
+     *
+     * @param studentId the student ID as entered
+     * @param date      date of the event
+     * @param start     start of the event
+     * @param end       end of the event
+     * @return true if one interval covers the complete range
+     * @throws ValidationException if no student has the ID
+     */
+    public boolean isAvailable(String studentId, LocalDate date, LocalTime start, LocalTime end) {
+<span class="fc" id="L102">        return current(studentId).isAvailable(date, start, end);</span>
+    }
+
+    /**
+     * Looks up the stored availability of an existing student.
+     *
+     * @param studentId the student ID as entered
+     * @return the stored availability, or empty availability if none was stored
+     * @throws ValidationException if no student has the ID
+     */
+    private Availability current(String studentId) {
+<span class="fc" id="L113">        String id = students.get(studentId).id();</span>
+<span class="fc" id="L114">        return repository.findByStudentId(id).orElseGet(() -&gt; Availability.empty(id));</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>
