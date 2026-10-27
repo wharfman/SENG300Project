@@ -52,6 +52,22 @@ class EventTest {
     }
 
     @Test
+    @DisplayName("Given a draft with a recorded response, when invitees are added and removed, then kept invitees keep their response, new ones are PENDING, and removed ones are dropped")
+    void editingDraftKeepsExistingResponses() {
+        Event event = new Event("E001", inviting("S001", "S002", "S003"), EventStatus.DRAFT, Map.of(
+                "S001", AttendanceResponse.DECLINED,
+                "S002", AttendanceResponse.PENDING,
+                "S003", AttendanceResponse.PENDING));
+
+        Event edited = event.withDetails(inviting("S001", "S002", "S004"));
+
+        assertEquals(Map.of(
+                "S001", AttendanceResponse.DECLINED,
+                "S002", AttendanceResponse.PENDING,
+                "S004", AttendanceResponse.PENDING), edited.responses());
+    }
+
+    @Test
     @DisplayName("Given a cancelled event, when its details are changed, then it is rejected")
     void onlyDraftsCanBeEdited() {
         Event cancelled = new Event("E001", inviting("S001", "S002"), EventStatus.CANCELLED,

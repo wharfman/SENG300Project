@@ -11,6 +11,7 @@ import com.campusplan.domain.EventDetails;
 import com.campusplan.domain.ValidationException;
 import com.campusplan.persistence.EventRepository;
 
+import java.util.Comparator;
 import java.util.List;
 
 /**
@@ -82,12 +83,14 @@ public class EventService {
     }
 
     /**
-     * Returns every event.
+     * Returns every event, ordered by first day of the date window and then by ID.
      *
-     * @return all events, in storage order
+     * @return all events, sorted
      */
     public List<Event> list() {
-        return repository.findAll();
+        return repository.findAll().stream()
+                .sorted(Comparator.comparing((Event e) -> e.details().firstDay()).thenComparing(Event::id))
+                .toList();
     }
 
     /**

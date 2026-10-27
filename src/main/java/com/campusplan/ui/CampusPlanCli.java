@@ -32,6 +32,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
+import java.util.TreeMap;
 import java.util.stream.Collectors;
 
 /**
@@ -132,20 +133,26 @@ public class CampusPlanCli {
         }
     }
 
-    /** Asks whether to load sample data when there is no saved data. */
+    /** When there is no saved data, offers each sample dataset or an empty start. Anything else starts empty. */
     private void offerSeed() {
         if (!seed.canLoad()) {
             return;
         }
+        List<String> datasets = seed.datasets();
         out.println("No saved data found.");
-        String answer = promptOrEmpty("Load sample data? (y/n)");
-        if (!answer.equalsIgnoreCase("y")) {
+        for (int i = 0; i < datasets.size(); i++) {
+            out.println("  " + (i + 1) + ". " + datasets.get(i));
+        }
+        out.println("  " + (datasets.size() + 1) + ". Start with no data");
+        String answer = promptOrEmpty("Choose how to start");
+        int index = answer.matches("\\d+") ? Integer.parseInt(answer) - 1 : -1;
+        if (index < 0 || index >= datasets.size()) {
             out.println("Starting with no data.");
             return;
         }
         try {
-            seed.load();
-            out.println("Sample data loaded.");
+            seed.load(datasets.get(index));
+            out.println("Loaded: " + datasets.get(index));
         } catch (ValidationException | StorageException e) {
             out.println("Error: " + e.getMessage());
         }
@@ -171,12 +178,14 @@ public class CampusPlanCli {
         out.println("Updated " + format(updated));
     }
 
-    /** Prompts for a student ID and prints that student's details. */
+    /** Prompts for a student ID and prints that student's details and availability. */
     private void viewStudent() {
         Student student = students.get(promptOrEmpty("Student ID"));
         out.println("ID:    " + student.id());
         out.println("Name:  " + student.name());
         out.println("Email: " + student.email());
+        out.println("Availability:");
+        printAvailability(availability.get(student.id()));
     }
 
     /** Prompts for a minimum capacity and required features and prints the matching rooms. */
@@ -198,11 +207,17 @@ public class CampusPlanCli {
         LocalDate date = parseDate(promptOrEmpty("Date (YYYY-MM-DD)"));
         LocalTime start = parseTime(promptOrEmpty("Start time (HH:MM)"));
         LocalTime end = parseTime(promptOrEmpty("End time (HH:MM)"));
-        List<AvailabilityInterval> result = add
+        List<AvailabilityInterval> before = availability.get(student.id());
+        List<AvailabilityInterval> after = add
                 ? availability.add(student.id(), date, start, end)
                 : availability.remove(student.id(), date, start, end);
-        out.println((add ? "Added" : "Removed") + " availability for " + student.id() + ".");
-        printAvailability(result);
+        if (after.equals(before)) {
+            out.println("Nothing changed: " + student.id() + " is already available " + date + " " + start + "-" + end + ".");
+        } else {
+            out.println((add ? "Added" : "Removed") + " availability for " + student.id() + ".");
+        }
+        out.println("Availability for " + student.id() + " on " + date + ":");
+        printAvailability(after.stream().filter(i -> i.date().equals(date)).toList());
     }
 
     /** Prompts for a student ID and prints their availability. */
@@ -225,6 +240,24 @@ public class CampusPlanCli {
         int minimum = parseNumber(promptOrEmpty("Minimum attendance"), "Minimum attendance");
         Event event = events.create(new EventDetails(title, invitees, firstDay, lastDay, duration, features, minimum));
         out.println("Created draft " + format(event));
+        reportFittingRooms(event.details());
+    }
+
+    /**
+     * Tells the organizer how many rooms could host the event, or warns that none can.
+     *
+     * @param d the event's planning fields
+     */
+    private void reportFittingRooms(EventDetails d) {
+        int invitees = d.inviteeIds().size();
+        int fitting = rooms.filter(invitees, d.requiredFeatures()).size();
+        if (fitting == 0) {
+            out.println("Warning: no room seats all " + invitees + " invitees with the required features,"
+                    + " so scheduling will not find any suggestions.");
+        } else {
+            out.println(fitting + (fitting == 1 ? " room seats" : " rooms seat") + " all " + invitees
+                    + " invitees and " + (fitting == 1 ? "has" : "have") + " the required features.");
+        }
     }
 
     /** Prompts for an event ID, then for new planning fields; a blank answer keeps the current value. */
@@ -251,6 +284,7 @@ public class CampusPlanCli {
                         : features.equalsIgnoreCase("NONE") ? Set.of() : parseFeatures(features),
                 minimum.isBlank() ? d.minimumAttendance() : parseNumber(minimum, "Minimum attendance"));
         out.println("Updated " + format(events.edit(existing.id(), updated)));
+        reportFittingRooms(updated);
     }
 
     /** Prompts for an event ID and prints its details and each invitee's response. */
@@ -269,14 +303,14 @@ public class CampusPlanCli {
                 out.printf("  %-5s %-30s %s%n", id, students.get(id).name(), response));
     }
 
-    /** Prints one line per event, or a message if there are none. */
+    /** Prints one line per event, sorted by first day and then ID, or a message if there are none. */
     private void listEvents() {
         List<Event> all = events.list();
         if (all.isEmpty()) {
             out.println("No events.");
             return;
         }
-        all.forEach(e -> out.println(format(e)));
+        all.forEach(e -> out.println(format(e) + "  (" + e.details().inviteeIds().size() + " invitees)"));
     }
 
     /**
@@ -404,16 +438,20 @@ public class CampusPlanCli {
     }
 
     /**
-     * Prints one line per availability interval, or a message if there are none.
+     * Prints one line per date listing that date's intervals, or a message if there are none.
      *
-     * @param list merged intervals to print
+     * @param list merged intervals to print, sorted by date and start
      */
     private void printAvailability(List<AvailabilityInterval> list) {
         if (list.isEmpty()) {
             out.println("  No availability entered.");
             return;
         }
-        list.forEach(i -> out.println("  " + i.date() + "  " + i.start() + "-" + i.end()));
+        // TreeMap keeps dates in order; intervals within a date are already sorted.
+        list.stream()
+                .collect(Collectors.groupingBy(AvailabilityInterval::date, TreeMap::new,
+                        Collectors.mapping(i -> i.start() + "-" + i.end(), Collectors.joining(", "))))
+                .forEach((date, times) -> out.println("  " + date + "  " + times));
     }
 
     /**

@@ -68,18 +68,23 @@ public record Event(String id, EventDetails details, EventStatus status,
     }
 
     /**
-     * Returns a copy of this draft with new planning fields. Every response stays PENDING,
-     * since a draft has no recorded responses yet.
+     * Returns a copy of this draft with new planning fields. Invitees who stay keep their
+     * response, new invitees start PENDING, and removed invitees lose theirs.
      *
      * @param newDetails the replacement planning fields
      * @return the edited draft, with the same ID
-     * @throws ValidationException if this event is not a draft
+     * @throws ValidationException if this event is not a draft or the details are missing
      */
     public Event withDetails(EventDetails newDetails) {
         if (status != EventStatus.DRAFT) {
-            throw new ValidationException("Only draft events can be edited; event " + id + " is " + status + ".");
+            throw new ValidationException("Only DRAFT events can be edited; event " + id + " is " + status + ".");
         }
-        return draft(id, newDetails);
+        if (newDetails == null) {
+            throw new ValidationException("Event details are required.");
+        }
+        Map<String, AttendanceResponse> kept = pending(newDetails);
+        kept.replaceAll((invitee, pending) -> responses.getOrDefault(invitee, pending));
+        return new Event(id, newDetails, status, kept);
     }
 
     /**

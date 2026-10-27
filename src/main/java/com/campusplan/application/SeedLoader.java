@@ -6,7 +6,9 @@
  */
 package com.campusplan.application;
 
-/** Loads the documented seed data. Seed loading only happens into an empty application. */
+import java.util.List;
+
+/** Loads one of the documented sample datasets. Seed loading only happens into an empty application. */
 public interface SeedLoader {
 
     /** A loader that never offers seed data, for sessions that start with data or in tests. */
@@ -17,7 +19,12 @@ public interface SeedLoader {
         }
 
         @Override
-        public void load() {
+        public List<String> datasets() {
+            return List.of();
+        }
+
+        @Override
+        public void load(String dataset) {
             throw new IllegalStateException("No seed data is available.");
         }
     };
@@ -25,15 +32,23 @@ public interface SeedLoader {
     /**
      * Whether seed data can be loaded now.
      *
-     * @return true if the application is empty and seed data is available
+     * @return true if the application is empty and at least one dataset is available
      */
     boolean canLoad();
 
     /**
-     * Loads the seed data and saves it.
+     * Describes the datasets that can be loaded, in the order they should be offered.
      *
-     * @throws com.campusplan.domain.ValidationException     if the application is not empty
-     * @throws com.campusplan.persistence.StorageException if the seed data is corrupt or cannot be saved
+     * @return one operator-facing description per dataset
      */
-    void load();
+    List<String> datasets();
+
+    /**
+     * Loads a dataset and saves it.
+     *
+     * @param dataset one of the descriptions returned by {@link #datasets()}
+     * @throws com.campusplan.domain.ValidationException     if the application is not empty
+     * @throws com.campusplan.persistence.StorageException if the data is corrupt or cannot be saved
+     */
+    void load(String dataset);
 }

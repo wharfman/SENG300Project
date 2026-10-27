@@ -37,8 +37,8 @@ class SampleDataTest {
     /** Same data, but E001 needs all six invitees, so it has no valid suggestion. */
     private static final Path NO_SUGGESTION = Path.of("sample-data", "campusplan-no-suggestion.json");
 
-    /** Seed data bundled into the application and offered on first start. */
-    private static final Path SEED = Path.of("src", "main", "resources", "seed", "campusplan-seed.json");
+    /** Bundled copies of the two samples, offered on first start. */
+    private static final Path BUNDLED = Path.of("src", "main", "resources", "seed");
 
     /** Opens a sample file read-only; opening never writes. */
     private static JsonDataStore open(Path file) {
@@ -124,8 +124,10 @@ class SampleDataTest {
     }
 
     @Test
-    @DisplayName("Given the bundled seed data, when compared with the sample file, then they are identical")
-    void seedMatchesSample() throws IOException {
-        assertArrayEquals(Files.readAllBytes(SAMPLE), Files.readAllBytes(SEED));
+    @DisplayName("Given the bundled seed data, when compared with sample-data/, then both files are identical")
+    void bundledSeedsMatchSamples() throws IOException {
+        assertArrayEquals(Files.readAllBytes(SAMPLE), Files.readAllBytes(BUNDLED.resolve(SAMPLE.getFileName())));
+        assertArrayEquals(Files.readAllBytes(NO_SUGGESTION),
+                Files.readAllBytes(BUNDLED.resolve(NO_SUGGESTION.getFileName())));
     }
 }

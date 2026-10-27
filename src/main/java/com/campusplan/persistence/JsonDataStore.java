@@ -27,7 +27,9 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -46,7 +48,7 @@ import java.util.function.Function;
  *       and rooms from the built-in catalogue. No file is created until the first save.</li>
  *   <li>A file that cannot be parsed, has an unknown format version, or breaks a rule
  *       (invalid record, duplicate ID, reference to an unknown student) is reported as a
- *       {@link StorageException} and is never overwritten.</li>
+ *       {@link StorageException} and is never overwritten. The operator may {@link #setAside set it aside}.</li>
  *   <li>A save writes a temporary file and then moves it over the old one, so a failed save
  *       leaves the previous file intact. The change is also undone in memory and a
  *       {@link StorageException} is thrown.</li>
@@ -102,6 +104,27 @@ public class JsonDataStore {
             return new JsonDataStore(file, read(in, "Data file " + file));
         } catch (IOException e) {
             throw new StorageException("Could not read data file " + file + ": " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Renames an unusable data file so the application can start empty, keeping its contents
+     * for later repair. The new name adds {@code .corrupt-<timestamp>}, so earlier set-aside files are never replaced.
+     *
+     * @param file the data file to set aside
+     * @return where the file now is
+     * @throws StorageException if the file cannot be renamed; it is then left where it was
+     */
+    public static Path setAside(Path file) {
+        String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"));
+        Path target = file.resolveSibling(file.getFileName() + ".corrupt-" + stamp);
+        for (int n = 2; Files.exists(target); n++) {
+            target = file.resolveSibling(file.getFileName() + ".corrupt-" + stamp + "-" + n);
+        }
+        try {
+            return Files.move(file, target);
+        } catch (IOException e) {
+            throw new StorageException("Could not set aside " + file + ": " + e.getMessage(), e);
         }
     }
 
@@ -211,6 +234,9 @@ public class JsonDataStore {
      * @throws StorageException if the file cannot be written
      */
     private <T> void saveInto(Map<String, T> map, String key, T value) {
+        if (value.equals(map.get(key))) {
+            return; // Nothing changed, so the file is not rewritten.
+        }
         T previous = map.put(key, value);
         try {
             persist();
@@ -299,7 +325,9 @@ public class JsonDataStore {
             json = MAPPER.readValue(in, DataFileJson.class);
         } catch (JsonProcessingException e) {
             // Also covers a ValidationException thrown by a record constructor during parsing.
-            throw new StorageException(source + " is corrupt: " + e.getOriginalMessage(), e);
+            String where = e.getLocation() == null ? ""
+                    : " at line " + e.getLocation().getLineNr() + ", column " + e.getLocation().getColumnNr();
+            throw new StorageException(source + " is corrupt" + where + ": " + e.getOriginalMessage(), e);
         } catch (IOException e) {
             throw new StorageException("Could not read " + source + ": " + e.getMessage(), e);
         }

@@ -217,6 +217,57 @@ class JsonDataStoreTest {
     }
 
     @Test
+    @DisplayName("Given a saved student, when the same student is saved again unchanged, then the file is not rewritten")
+    void unchangedSaveDoesNotWrite() throws IOException {
+        JsonDataStore store = JsonDataStore.open(file(), CATALOGUE);
+        Student ada = new StudentService(store.students()).create("Ada", "ada@example.com");
+        // Any write would now fail, so an exception would show the file was rewritten.
+        Files.createDirectory(dir.resolve("campusplan.json.tmp"));
+
+        store.students().save(ada);
+        new StudentService(store.students()).edit(ada.id(), "Ada", "ADA@example.com");
+
+        assertEquals(List.of(ada), store.students().findAll());
+    }
+
+    @Test
+    @DisplayName("Given a data file cut off partway through, when the store is opened, then the error gives the line and column")
+    void corruptFileErrorNamesLineAndColumn() throws IOException {
+        writeFile("{\n  \"formatVersion\": 1,\n  \"students\": [ { \"id\": \"S001\", ");
+
+        StorageException e = assertThrows(StorageException.class, () -> JsonDataStore.open(file(), CATALOGUE));
+
+        assertTrue(e.getMessage().contains("at line 3, column"), e.getMessage());
+    }
+
+    @Test
+    @DisplayName("Given a corrupt data file, when it is set aside, then it keeps identical contents under a new name and the store opens empty")
+    void setAsideKeepsCorruptFile() throws IOException {
+        writeFile("{ broken");
+        byte[] original = Files.readAllBytes(file());
+
+        Path aside = JsonDataStore.setAside(file());
+
+        assertFalse(Files.exists(file()));
+        assertTrue(aside.getFileName().toString().startsWith("campusplan.json.corrupt-"));
+        assertArrayEquals(original, Files.readAllBytes(aside));
+        assertTrue(JsonDataStore.open(file(), CATALOGUE).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given a leftover temporary file from a save that was interrupted, when the store is opened, then the last complete save is loaded")
+    void interruptedSaveLoadsLastCompleteSave() throws IOException {
+        new StudentService(JsonDataStore.open(file(), CATALOGUE).students()).create("Ada", "ada@example.com");
+        Files.writeString(dir.resolve("campusplan.json.tmp"), "{ half-written", StandardCharsets.UTF_8);
+
+        JsonDataStore reopened = JsonDataStore.open(file(), CATALOGUE);
+
+        assertEquals("Ada", reopened.students().findAll().get(0).name());
+        new StudentService(reopened.students()).create("Grace", "grace@example.com");
+        assertEquals(2, JsonDataStore.open(file(), CATALOGUE).students().findAll().size());
+    }
+
+    @Test
     @DisplayName("Given an empty store, when seed data is loaded, then it is stored and saved; loading again is rejected without change")
     void loadsSeedOnlyIntoEmptyStore() {
         String seed = """

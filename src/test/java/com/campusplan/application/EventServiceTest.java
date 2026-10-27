@@ -64,6 +64,17 @@ class EventServiceTest {
     }
 
     @Test
+    @DisplayName("Given drafts created out of date order, when events are listed, then they are sorted by first day and then by ID")
+    void listsByFirstDayThenId() {
+        Event later = service.create(new EventDetails("Later", List.of("S001", "S002"),
+                DAY.plusDays(3), DAY.plusDays(3), 60, Set.of(), 2));
+        Event earlyA = service.create(details("Early A", "S001", "S002"));
+        Event earlyB = service.create(details("Early B", "S002", "S003"));
+
+        assertEquals(List.of(earlyA, earlyB, later), service.list());
+    }
+
+    @Test
     @DisplayName("Given a student ID that does not exist, when a draft is created, then it is rejected, nothing is saved, and no ID is used up")
     void rejectsUnknownInvitee() {
         assertThrows(ValidationException.class, () -> service.create(details("Meeting", "S001", "S999")));

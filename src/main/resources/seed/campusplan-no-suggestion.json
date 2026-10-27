@@ -1,0 +1,444 @@
+{
+  "formatVersion": 1,
+  "rooms": [
+    {
+      "id": "R01",
+      "name": "Maple Hall 101",
+      "capacity": 6,
+      "features": [
+        "WHITEBOARD"
+      ]
+    },
+    {
+      "id": "R02",
+      "name": "Maple Hall 204",
+      "capacity": 12,
+      "features": [
+        "WHITEBOARD",
+        "PROJECTOR",
+        "ACCESSIBLE"
+      ]
+    },
+    {
+      "id": "R03",
+      "name": "Birch Study Room A",
+      "capacity": 4,
+      "features": []
+    },
+    {
+      "id": "R04",
+      "name": "Birch Study Room B",
+      "capacity": 8,
+      "features": [
+        "WHITEBOARD",
+        "ACCESSIBLE"
+      ]
+    },
+    {
+      "id": "R05",
+      "name": "Cedar Lecture Room",
+      "capacity": 40,
+      "features": [
+        "PROJECTOR",
+        "ACCESSIBLE"
+      ]
+    },
+    {
+      "id": "R06",
+      "name": "Aspen Seminar Room",
+      "capacity": 20,
+      "features": [
+        "WHITEBOARD",
+        "PROJECTOR"
+      ]
+    },
+    {
+      "id": "R07",
+      "name": "Willow Lounge",
+      "capacity": 5,
+      "features": [
+        "ACCESSIBLE"
+      ]
+    }
+  ],
+  "students": [
+    {
+      "id": "S001",
+      "name": "Ada Lovelace",
+      "email": "ada.lovelace@campusplan.example"
+    },
+    {
+      "id": "S002",
+      "name": "Grace Hopper",
+      "email": "grace.hopper@campusplan.example"
+    },
+    {
+      "id": "S003",
+      "name": "Alan Turing",
+      "email": "alan.turing@campusplan.example"
+    },
+    {
+      "id": "S004",
+      "name": "Katherine Johnson",
+      "email": "katherine.johnson@campusplan.example"
+    },
+    {
+      "id": "S005",
+      "name": "Edsger Dijkstra",
+      "email": "edsger.dijkstra@campusplan.example"
+    },
+    {
+      "id": "S006",
+      "name": "Barbara Liskov",
+      "email": "barbara.liskov@campusplan.example"
+    },
+    {
+      "id": "S007",
+      "name": "Donald Knuth",
+      "email": "donald.knuth@campusplan.example"
+    },
+    {
+      "id": "S008",
+      "name": "Margaret Hamilton",
+      "email": "margaret.hamilton@campusplan.example"
+    },
+    {
+      "id": "S009",
+      "name": "Tim Berners-Lee",
+      "email": "tim.bernerslee@campusplan.example"
+    },
+    {
+      "id": "S010",
+      "name": "Radia Perlman",
+      "email": "radia.perlman@campusplan.example"
+    },
+    {
+      "id": "S011",
+      "name": "Linus Torvalds",
+      "email": "linus.torvalds@campusplan.example"
+    },
+    {
+      "id": "S012",
+      "name": "Frances Allen",
+      "email": "frances.allen@campusplan.example"
+    }
+  ],
+  "availability": [
+    {
+      "studentId": "S001",
+      "intervals": [
+        {
+          "date": "2026-11-02",
+          "start": "09:00",
+          "end": "11:00"
+        },
+        {
+          "date": "2026-11-02",
+          "start": "13:00",
+          "end": "17:00"
+        },
+        {
+          "date": "2026-11-03",
+          "start": "10:00",
+          "end": "12:00"
+        },
+        {
+          "date": "2026-11-05",
+          "start": "10:00",
+          "end": "12:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S002",
+      "intervals": [
+        {
+          "date": "2026-11-02",
+          "start": "12:00",
+          "end": "16:00"
+        },
+        {
+          "date": "2026-11-04",
+          "start": "09:00",
+          "end": "12:00"
+        },
+        {
+          "date": "2026-11-06",
+          "start": "14:00",
+          "end": "16:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S003",
+      "intervals": [
+        {
+          "date": "2026-11-02",
+          "start": "13:00",
+          "end": "18:00"
+        },
+        {
+          "date": "2026-11-03",
+          "start": "08:00",
+          "end": "10:00"
+        },
+        {
+          "date": "2026-11-05",
+          "start": "09:30",
+          "end": "12:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S004",
+      "intervals": [
+        {
+          "date": "2026-11-02",
+          "start": "10:00",
+          "end": "16:00"
+        },
+        {
+          "date": "2026-11-03",
+          "start": "13:00",
+          "end": "15:00"
+        },
+        {
+          "date": "2026-11-07",
+          "start": "10:00",
+          "end": "14:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S005",
+      "intervals": [
+        {
+          "date": "2026-11-02",
+          "start": "13:00",
+          "end": "15:00"
+        },
+        {
+          "date": "2026-11-02",
+          "start": "15:00",
+          "end": "16:00"
+        },
+        {
+          "date": "2026-11-04",
+          "start": "15:00",
+          "end": "18:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S006",
+      "intervals": [
+        {
+          "date": "2026-11-05",
+          "start": "08:00",
+          "end": "12:00"
+        },
+        {
+          "date": "2026-11-06",
+          "start": "08:00",
+          "end": "12:00"
+        },
+        {
+          "date": "2026-11-08",
+          "start": "12:00",
+          "end": "16:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S007",
+      "intervals": [
+        {
+          "date": "2026-11-06",
+          "start": "18:00",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-07",
+          "start": "17:00",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-03",
+          "start": "09:00",
+          "end": "11:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S008",
+      "intervals": [
+        {
+          "date": "2026-11-05",
+          "start": "10:00",
+          "end": "12:30"
+        },
+        {
+          "date": "2026-11-06",
+          "start": "17:00",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-08",
+          "start": "09:00",
+          "end": "11:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S009",
+      "intervals": [
+        {
+          "date": "2026-11-06",
+          "start": "18:00",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-04",
+          "start": "13:00",
+          "end": "16:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S010",
+      "intervals": [
+        {
+          "date": "2026-11-06",
+          "start": "16:00",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-07",
+          "start": "18:00",
+          "end": "21:00"
+        },
+        {
+          "date": "2026-11-05",
+          "start": "14:00",
+          "end": "15:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S011",
+      "intervals": [
+        {
+          "date": "2026-11-06",
+          "start": "18:00",
+          "end": "21:30"
+        },
+        {
+          "date": "2026-11-06",
+          "start": "21:30",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-02",
+          "start": "08:00",
+          "end": "09:00"
+        }
+      ]
+    },
+    {
+      "studentId": "S012",
+      "intervals": [
+        {
+          "date": "2026-11-07",
+          "start": "12:00",
+          "end": "22:00"
+        },
+        {
+          "date": "2026-11-08",
+          "start": "08:00",
+          "end": "20:00"
+        }
+      ]
+    }
+  ],
+  "events": [
+    {
+      "id": "E001",
+      "title": "Capstone project meeting",
+      "inviteeIds": [
+        "S001",
+        "S002",
+        "S003",
+        "S004",
+        "S005",
+        "S006"
+      ],
+      "firstDay": "2026-11-02",
+      "lastDay": "2026-11-04",
+      "durationMinutes": 120,
+      "requiredFeatures": [
+        "WHITEBOARD"
+      ],
+      "minimumAttendance": 6,
+      "status": "DRAFT",
+      "responses": {
+        "S001": "PENDING",
+        "S002": "PENDING",
+        "S003": "PENDING",
+        "S004": "PENDING",
+        "S005": "PENDING",
+        "S006": "PENDING"
+      }
+    },
+    {
+      "id": "E002",
+      "title": "Board game night",
+      "inviteeIds": [
+        "S007",
+        "S008",
+        "S009",
+        "S010",
+        "S011",
+        "S012"
+      ],
+      "firstDay": "2026-11-06",
+      "lastDay": "2026-11-07",
+      "durationMinutes": 180,
+      "requiredFeatures": [],
+      "minimumAttendance": 5,
+      "status": "DRAFT",
+      "responses": {
+        "S007": "PENDING",
+        "S008": "PENDING",
+        "S009": "PENDING",
+        "S010": "PENDING",
+        "S011": "PENDING",
+        "S012": "PENDING"
+      }
+    },
+    {
+      "id": "E003",
+      "title": "Accessibility workshop",
+      "inviteeIds": [
+        "S001",
+        "S003",
+        "S008",
+        "S010"
+      ],
+      "firstDay": "2026-11-05",
+      "lastDay": "2026-11-05",
+      "durationMinutes": 90,
+      "requiredFeatures": [
+        "PROJECTOR",
+        "ACCESSIBLE"
+      ],
+      "minimumAttendance": 3,
+      "status": "DRAFT",
+      "responses": {
+        "S001": "PENDING",
+        "S003": "PENDING",
+        "S008": "PENDING",
+        "S010": "PENDING"
+      }
+    }
+  ]
+}
