@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>InMemoryStudentRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.persistence</a> &gt; <span class="el_source">InMemoryStudentRepository.java</span></div><h1>InMemoryStudentRepository.java</h1><pre class="source lang-java linenums">/*
+ * InMemoryStudentRepository.java
+ *
+ * Persistence-layer implementation of StudentRepository that keeps students in memory
+ * for the lifetime of the application.
+ */
+package com.campusplan.persistence;
+
+import com.campusplan.domain.Student;
+
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+
+/** Student storage backed by a map; contents are lost when the application exits. */
+<span class="fc" id="L17">public class InMemoryStudentRepository implements StudentRepository {</span>
+
+    /** Students keyed by ID; insertion order is kept so listings are stable. */
+<span class="fc" id="L20">    private final Map&lt;String, Student&gt; students = new LinkedHashMap&lt;&gt;();</span>
+
+    /** {@inheritDoc} */
+    @Override
+    public List&lt;Student&gt; findAll() {
+<span class="fc" id="L25">        return List.copyOf(students.values());</span>
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public Optional&lt;Student&gt; findById(String id) {
+<span class="fc" id="L31">        return Optional.ofNullable(students.get(id));</span>
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public void save(Student student) {
+<span class="fc" id="L37">        students.put(student.id(), student);</span>
+<span class="fc" id="L38">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

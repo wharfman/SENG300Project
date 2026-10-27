@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Availability.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.domain</a> &gt; <span class="el_source">Availability.java</span></div><h1>Availability.java</h1><pre class="source lang-java linenums">/*
+ * Availability.java
+ *
+ * Domain model for all the time one student is free, with the rule that
+ * overlapping or adjacent intervals are merged.
+ */
+package com.campusplan.domain;
+
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.List;
+
+/**
+ * The time a student is free. Intervals are always stored merged and sorted, so no two
+ * overlap or touch. Missing availability means unavailable.
+ *
+ * &lt;p&gt;Instances are immutable; adding or removing time returns a new instance.
+ *
+ * @param studentId ID of the student this availability belongs to, never blank
+ * @param intervals free time, merged and sorted by date and start
+ */
+public record Availability(String studentId, List&lt;AvailabilityInterval&gt; intervals) {
+
+    /**
+     * Validates the student ID and merges the intervals.
+     *
+     * @throws ValidationException if the student ID is blank
+     */
+<span class="fc" id="L30">    public Availability {</span>
+<span class="pc bpc" id="L31" title="1 of 4 branches missed.">        if (studentId == null || studentId.isBlank()) {</span>
+<span class="fc" id="L32">            throw new ValidationException(&quot;Student ID is required.&quot;);</span>
+        }
+<span class="pc bpc" id="L34" title="1 of 2 branches missed.">        intervals = merge(intervals == null ? List.of() : intervals);</span>
+<span class="fc" id="L35">    }</span>
+
+    /**
+     * Creates availability with no free time.
+     *
+     * @param studentId ID of the student
+     * @return availability with no intervals
+     */
+    public static Availability empty(String studentId) {
+<span class="fc" id="L44">        return new Availability(studentId, List.of());</span>
+    }
+
+    /**
+     * Returns a copy with the given time added, merged with any overlapping or adjacent interval.
+     *
+     * @param interval the free time to add
+     * @return the updated availability
+     */
+    public Availability with(AvailabilityInterval interval) {
+<span class="fc" id="L54">        List&lt;AvailabilityInterval&gt; added = new ArrayList&lt;&gt;(intervals);</span>
+<span class="fc" id="L55">        added.add(interval);</span>
+<span class="fc" id="L56">        return new Availability(studentId, added);</span>
+    }
+
+    /**
+     * Returns a copy with the given time removed. Intervals partly inside it are trimmed or split.
+     *
+     * @param removed the time that is no longer free
+     * @return the updated availability
+     * @throws ValidationException if no stored interval overlaps the removed time
+     */
+    public Availability without(AvailabilityInterval removed) {
+<span class="fc bfc" id="L67" title="All 2 branches covered.">        if (intervals.stream().noneMatch(removed::overlaps)) {</span>
+<span class="fc" id="L68">            throw new ValidationException(&quot;Student &quot; + studentId + &quot; has no availability on &quot;</span>
+<span class="fc" id="L69">                    + removed.date() + &quot; between &quot; + removed.start() + &quot; and &quot; + removed.end() + &quot;.&quot;);</span>
+        }
+<span class="fc" id="L71">        List&lt;AvailabilityInterval&gt; remaining = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L72" title="All 2 branches covered.">        for (AvailabilityInterval interval : intervals) {</span>
+<span class="pc bpc" id="L73" title="1 of 2 branches missed.">            if (!interval.overlaps(removed)) {</span>
+<span class="nc" id="L74">                remaining.add(interval);</span>
+<span class="nc" id="L75">                continue;</span>
+            }
+            // Keep whatever lies before and after the removed block.
+<span class="fc bfc" id="L78" title="All 2 branches covered.">            if (interval.start().isBefore(removed.start())) {</span>
+<span class="fc" id="L79">                remaining.add(new AvailabilityInterval(interval.date(), interval.start(), removed.start()));</span>
+            }
+<span class="pc bpc" id="L81" title="1 of 2 branches missed.">            if (removed.end().isBefore(interval.end())) {</span>
+<span class="fc" id="L82">                remaining.add(new AvailabilityInterval(interval.date(), removed.end(), interval.end()));</span>
+            }
+<span class="fc" id="L84">        }</span>
+<span class="fc" id="L85">        return new Availability(studentId, remaining);</span>
+    }
+
+    /**
+     * Whether the student is free for the whole of the given time range.
+     *
+     * @param date  date of the event
+     * @param start start of the event
+     * @param end   end of the event
+     * @return true if a single interval covers the complete range
+     */
+    public boolean isAvailable(LocalDate date, LocalTime start, LocalTime end) {
+        // Intervals are merged, so a range across a join is covered by the one merged interval.
+<span class="fc" id="L98">        return intervals.stream().anyMatch(i -&gt; i.covers(date, start, end));</span>
+    }
+
+    /**
+     * Sorts intervals and combines any that overlap or touch.
+     *
+     * @param unsorted intervals in any order, possibly overlapping
+     * @return an unmodifiable sorted list where no two intervals overlap or touch
+     */
+    private static List&lt;AvailabilityInterval&gt; merge(List&lt;AvailabilityInterval&gt; unsorted) {
+<span class="fc" id="L108">        List&lt;AvailabilityInterval&gt; sorted = unsorted.stream().sorted().toList();</span>
+<span class="fc" id="L109">        List&lt;AvailabilityInterval&gt; merged = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L110" title="All 2 branches covered.">        for (AvailabilityInterval next : sorted) {</span>
+<span class="fc" id="L111">            int last = merged.size() - 1;</span>
+<span class="fc bfc" id="L112" title="All 4 branches covered.">            if (last &gt;= 0 &amp;&amp; merged.get(last).overlapsOrTouches(next)) {</span>
+<span class="fc" id="L113">                AvailabilityInterval current = merged.get(last);</span>
+<span class="fc bfc" id="L114" title="All 2 branches covered.">                LocalTime end = current.end().isAfter(next.end()) ? current.end() : next.end();</span>
+<span class="fc" id="L115">                merged.set(last, new AvailabilityInterval(current.date(), current.start(), end));</span>
+<span class="fc" id="L116">            } else {</span>
+<span class="fc" id="L117">                merged.add(next);</span>
+            }
+<span class="fc" id="L119">        }</span>
+<span class="fc" id="L120">        return List.copyOf(merged);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

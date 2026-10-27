@@ -1,0 +1,137 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventDetails.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.domain</a> &gt; <span class="el_source">EventDetails.java</span></div><h1>EventDetails.java</h1><pre class="source lang-java linenums">/*
+ * EventDetails.java
+ *
+ * Domain model for the planning fields of an event, with the validation rules
+ * for title, invitees, date window, duration, and minimum attendance.
+ */
+package com.campusplan.domain;
+
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
+
+/**
+ * The planning fields of an event: what the organizer enters for a draft. The title and
+ * invitee IDs are stored trimmed. Whether each invitee is a real student is checked by the
+ * application layer, which can see the student list.
+ *
+ * &lt;p&gt;Instances are immutable, including the invitee list and feature set.
+ *
+ * @param title             event title, 1-100 characters after trimming
+ * @param inviteeIds        2-20 distinct student IDs, in the order entered
+ * @param firstDay          first day the event may take place
+ * @param lastDay           last day the event may take place; the window is 1-7 days inclusive
+ * @param durationMinutes   length of the event, 30-180 minutes in 30-minute steps
+ * @param requiredFeatures  features the room must provide, possibly empty
+ * @param minimumAttendance fewest eligible invitees needed, from 2 to the invitee count
+ */
+public record EventDetails(String title, List&lt;String&gt; inviteeIds, LocalDate firstDay, LocalDate lastDay,
+                           int durationMinutes, Set&lt;RoomFeature&gt; requiredFeatures, int minimumAttendance) {
+
+    /** Maximum length of an event title, measured after trimming. */
+    public static final int MAX_TITLE_LENGTH = 100;
+
+    /** Fewest students an event can invite. */
+    public static final int MIN_INVITEES = 2;
+
+    /** Most students an event can invite. */
+    public static final int MAX_INVITEES = 20;
+
+    /** Longest date window, in days. */
+    public static final int MAX_WINDOW_DAYS = 7;
+
+    /** Shortest event, in minutes. */
+    public static final int MIN_DURATION = 30;
+
+    /** Longest event, in minutes. */
+    public static final int MAX_DURATION = 180;
+
+    /**
+     * Validates and normalizes every field.
+     *
+     * @throws ValidationException if any field breaks its rule
+     */
+<span class="fc" id="L59">    public EventDetails {</span>
+<span class="fc bfc" id="L60" title="All 2 branches covered.">        title = title == null ? &quot;&quot; : title.trim();</span>
+<span class="fc bfc" id="L61" title="All 4 branches covered.">        if (title.isEmpty() || title.length() &gt; MAX_TITLE_LENGTH) {</span>
+<span class="fc" id="L62">            throw new ValidationException(</span>
+                    &quot;Event title must be 1-&quot; + MAX_TITLE_LENGTH + &quot; characters after trimming.&quot;);
+        }
+<span class="fc" id="L65">        inviteeIds = validateInvitees(inviteeIds);</span>
+<span class="fc" id="L66">        validateWindow(firstDay, lastDay);</span>
+<span class="fc bfc" id="L67" title="All 6 branches covered.">        if (durationMinutes &lt; MIN_DURATION || durationMinutes &gt; MAX_DURATION</span>
+                || durationMinutes % AvailabilityInterval.SLOT_MINUTES != 0) {
+<span class="fc" id="L69">            throw new ValidationException(&quot;Duration must be &quot; + MIN_DURATION + &quot;-&quot; + MAX_DURATION</span>
+                    + &quot; minutes in &quot; + AvailabilityInterval.SLOT_MINUTES + &quot;-minute steps.&quot;);
+        }
+<span class="fc bfc" id="L72" title="All 4 branches covered.">        if (minimumAttendance &lt; MIN_INVITEES || minimumAttendance &gt; inviteeIds.size()) {</span>
+<span class="fc" id="L73">            throw new ValidationException(&quot;Minimum attendance must be &quot; + MIN_INVITEES</span>
+<span class="fc" id="L74">                    + &quot;-&quot; + inviteeIds.size() + &quot; (the number of invitees).&quot;);</span>
+        }
+        // Same empty-set handling as Room: EnumSet.copyOf cannot copy an empty non-EnumSet collection.
+<span class="fc bfc" id="L77" title="All 4 branches covered.">        requiredFeatures = requiredFeatures == null || requiredFeatures.isEmpty()</span>
+<span class="fc" id="L78">                ? Collections.unmodifiableSet(EnumSet.noneOf(RoomFeature.class))</span>
+<span class="fc" id="L79">                : Collections.unmodifiableSet(EnumSet.copyOf(requiredFeatures));</span>
+<span class="fc" id="L80">    }</span>
+
+    /**
+     * Number of days in the date window, counting both ends.
+     *
+     * @return 1-7
+     */
+    public int windowDays() {
+<span class="fc" id="L88">        return (int) ChronoUnit.DAYS.between(firstDay, lastDay) + 1;</span>
+    }
+
+    /**
+     * Trims invitee IDs and checks the count and that none repeat.
+     *
+     * @param ids the IDs as entered, possibly null
+     * @return an unmodifiable list of trimmed IDs in the order entered
+     * @throws ValidationException if an ID is blank, an ID repeats, or the count is out of range
+     */
+    private static List&lt;String&gt; validateInvitees(List&lt;String&gt; ids) {
+<span class="fc" id="L99">        List&lt;String&gt; trimmed = new ArrayList&lt;&gt;();</span>
+<span class="fc" id="L100">        Set&lt;String&gt; seen = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L101" title="All 4 branches covered.">        for (String id : ids == null ? List.&lt;String&gt;of() : ids) {</span>
+<span class="pc bpc" id="L102" title="1 of 2 branches missed.">            String clean = id == null ? &quot;&quot; : id.trim();</span>
+<span class="fc bfc" id="L103" title="All 2 branches covered.">            if (clean.isEmpty()) {</span>
+<span class="fc" id="L104">                throw new ValidationException(&quot;Invitee IDs must not be blank.&quot;);</span>
+            }
+<span class="fc bfc" id="L106" title="All 2 branches covered.">            if (!seen.add(clean)) {</span>
+<span class="fc" id="L107">                throw new ValidationException(&quot;Student &quot; + clean + &quot; is invited more than once.&quot;);</span>
+            }
+<span class="fc" id="L109">            trimmed.add(clean);</span>
+<span class="fc" id="L110">        }</span>
+<span class="fc bfc" id="L111" title="All 4 branches covered.">        if (trimmed.size() &lt; MIN_INVITEES || trimmed.size() &gt; MAX_INVITEES) {</span>
+<span class="fc" id="L112">            throw new ValidationException(</span>
+                    &quot;An event must invite &quot; + MIN_INVITEES + &quot;-&quot; + MAX_INVITEES + &quot; distinct students.&quot;);
+        }
+<span class="fc" id="L115">        return List.copyOf(trimmed);</span>
+    }
+
+    /**
+     * Checks that the date window is present, in order, and 1-7 days long.
+     *
+     * @param firstDay first day of the window
+     * @param lastDay  last day of the window
+     * @throws ValidationException if a day is missing, the last day is before the first, or the window is too long
+     */
+    private static void validateWindow(LocalDate firstDay, LocalDate lastDay) {
+<span class="fc bfc" id="L126" title="All 4 branches covered.">        if (firstDay == null || lastDay == null) {</span>
+<span class="fc" id="L127">            throw new ValidationException(&quot;First and last day of the date window are required.&quot;);</span>
+        }
+<span class="fc bfc" id="L129" title="All 2 branches covered.">        if (lastDay.isBefore(firstDay)) {</span>
+<span class="fc" id="L130">            throw new ValidationException(&quot;Last day must not be before the first day.&quot;);</span>
+        }
+<span class="fc bfc" id="L132" title="All 2 branches covered.">        if (ChronoUnit.DAYS.between(firstDay, lastDay) + 1 &gt; MAX_WINDOW_DAYS) {</span>
+<span class="fc" id="L133">            throw new ValidationException(&quot;Date window must be 1-&quot; + MAX_WINDOW_DAYS + &quot; consecutive days.&quot;);</span>
+        }
+<span class="fc" id="L135">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

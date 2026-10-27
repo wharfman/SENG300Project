@@ -1,0 +1,124 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>EventService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.application</a> &gt; <span class="el_source">EventService.java</span></div><h1>EventService.java</h1><pre class="source lang-java linenums">/*
+ * EventService.java
+ *
+ * Application-layer service for the draft event workflows: create, edit, view, and list.
+ * Enforces rules that need other records, such as invitees being existing students.
+ */
+package com.campusplan.application;
+
+import com.campusplan.domain.Event;
+import com.campusplan.domain.EventDetails;
+import com.campusplan.domain.ValidationException;
+import com.campusplan.persistence.EventRepository;
+
+import java.util.Comparator;
+import java.util.List;
+
+/**
+ * Event operations used by the user interface. Field rules are checked by {@link EventDetails}
+ * and draft rules by {@link Event}; this class adds ID generation and the check that every
+ * invitee is an existing student. A rejected operation leaves storage unchanged.
+ */
+public class EventService {
+
+    /** Where events are stored. */
+    private final EventRepository repository;
+
+    /** Used to check that every invitee exists. */
+    private final StudentService students;
+
+    /**
+     * Creates a service over the given storage.
+     *
+     * @param repository event storage
+     * @param students   student lookup
+     */
+<span class="fc" id="L36">    public EventService(EventRepository repository, StudentService students) {</span>
+<span class="fc" id="L37">        this.repository = repository;</span>
+<span class="fc" id="L38">        this.students = students;</span>
+<span class="fc" id="L39">    }</span>
+
+    /**
+     * Creates and stores a new draft event with a generated ID and PENDING responses.
+     *
+     * @param details the planning fields
+     * @return the stored draft
+     * @throws ValidationException if the details are missing or an invitee is not an existing student
+     */
+    public Event create(EventDetails details) {
+<span class="fc" id="L49">        ensureInviteesExist(details);</span>
+<span class="fc" id="L50">        Event event = Event.draft(nextId(), details);</span>
+<span class="fc" id="L51">        repository.save(event);</span>
+<span class="fc" id="L52">        return event;</span>
+    }
+
+    /**
+     * Replaces the planning fields of an existing draft. The ID never changes.
+     *
+     * @param id      ID of the event to edit
+     * @param details the new planning fields
+     * @return the stored, updated draft
+     * @throws ValidationException if no event has the ID, it is not a draft,
+     *                             or an invitee is not an existing student
+     */
+    public Event edit(String id, EventDetails details) {
+<span class="fc" id="L65">        Event existing = get(id);</span>
+<span class="fc" id="L66">        ensureInviteesExist(details);</span>
+<span class="fc" id="L67">        Event updated = existing.withDetails(details);</span>
+<span class="fc" id="L68">        repository.save(updated);</span>
+<span class="fc" id="L69">        return updated;</span>
+    }
+
+    /**
+     * Looks up an event by ID, ignoring surrounding whitespace.
+     *
+     * @param id the event ID as entered
+     * @return the matching event
+     * @throws ValidationException if no event has the ID
+     */
+    public Event get(String id) {
+<span class="pc bpc" id="L80" title="1 of 2 branches missed.">        String trimmed = id == null ? &quot;&quot; : id.trim();</span>
+<span class="fc" id="L81">        return repository.findById(trimmed)</span>
+<span class="fc" id="L82">                .orElseThrow(() -&gt; new ValidationException(&quot;No event with ID &quot; + trimmed + &quot;.&quot;));</span>
+    }
+
+    /**
+     * Returns every event, ordered by first day of the date window and then by ID.
+     *
+     * @return all events, sorted
+     */
+    public List&lt;Event&gt; list() {
+<span class="fc" id="L91">        return repository.findAll().stream()</span>
+<span class="fc" id="L92">                .sorted(Comparator.comparing((Event e) -&gt; e.details().firstDay()).thenComparing(Event::id))</span>
+<span class="fc" id="L93">                .toList();</span>
+    }
+
+    /**
+     * Rejects details that invite a student who does not exist.
+     *
+     * @param details the planning fields to check
+     * @throws ValidationException if the details are missing or an invitee ID is unknown
+     */
+    private void ensureInviteesExist(EventDetails details) {
+<span class="pc bpc" id="L103" title="1 of 2 branches missed.">        if (details == null) {</span>
+<span class="nc" id="L104">            throw new ValidationException(&quot;Event details are required.&quot;);</span>
+        }
+<span class="fc" id="L106">        details.inviteeIds().forEach(students::get);</span>
+<span class="fc" id="L107">    }</span>
+
+    /**
+     * IDs are E001, E002, ...; the next one follows the highest existing number.
+     *
+     * @return the next unused event ID
+     */
+    private String nextId() {
+<span class="fc" id="L115">        int max = repository.findAll().stream()</span>
+<span class="fc" id="L116">                .map(Event::id)</span>
+<span class="fc" id="L117">                .filter(id -&gt; id.matches(&quot;E\\d+&quot;))</span>
+<span class="fc" id="L118">                .mapToInt(id -&gt; Integer.parseInt(id.substring(1)))</span>
+<span class="fc" id="L119">                .max()</span>
+<span class="fc" id="L120">                .orElse(0);</span>
+<span class="fc" id="L121">        return String.format(&quot;E%03d&quot;, max + 1);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

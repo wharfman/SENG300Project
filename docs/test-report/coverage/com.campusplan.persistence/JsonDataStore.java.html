@@ -1,0 +1,489 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JsonDataStore.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.persistence</a> &gt; <span class="el_source">JsonDataStore.java</span></div><h1>JsonDataStore.java</h1><pre class="source lang-java linenums">/*
+ * JsonDataStore.java
+ *
+ * Persistence-layer file storage: keeps rooms, students, availability, and events in
+ * one UTF-8 JSON file and exposes them through the repository interfaces.
+ */
+package com.campusplan.persistence;
+
+import com.campusplan.domain.AttendanceResponse;
+import com.campusplan.domain.Availability;
+import com.campusplan.domain.AvailabilityInterval;
+import com.campusplan.domain.Event;
+import com.campusplan.domain.EventDetails;
+import com.campusplan.domain.EventStatus;
+import com.campusplan.domain.Room;
+import com.campusplan.domain.RoomFeature;
+import com.campusplan.domain.Student;
+import com.campusplan.domain.ValidationException;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.Set;
+import java.util.function.Function;
+
+/**
+ * All application data in one UTF-8 JSON file. Every change is written straight to disk.
+ *
+ * &lt;ul&gt;
+ *   &lt;li&gt;A missing file means an empty application: no students, availability, or events,
+ *       and rooms from the built-in catalogue. No file is created until the first save.&lt;/li&gt;
+ *   &lt;li&gt;A file that cannot be parsed, has an unknown format version, or breaks a rule
+ *       (invalid record, duplicate ID, reference to an unknown student) is reported as a
+ *       {@link StorageException} and is never overwritten. The operator may {@link #setAside set it aside}.&lt;/li&gt;
+ *   &lt;li&gt;A save writes a temporary file and then moves it over the old one, so a failed save
+ *       leaves the previous file intact. The change is also undone in memory and a
+ *       {@link StorageException} is thrown.&lt;/li&gt;
+ * &lt;/ul&gt;
+ */
+public class JsonDataStore {
+
+    /** Version written to, and required in, every data file. */
+    public static final int FORMAT_VERSION = 1;
+
+    /** Shared Jackson mapper; thread-safe once configured. */
+<span class="fc" id="L63">    private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);</span>
+
+    /** The data file. */
+    private final Path file;
+
+    /** The room catalogue. */
+    private List&lt;Room&gt; rooms;
+
+    /** Students keyed by ID, in insertion order. */
+<span class="fc" id="L72">    private final Map&lt;String, Student&gt; students = new LinkedHashMap&lt;&gt;();</span>
+
+    /** Availability keyed by student ID, in insertion order. */
+<span class="fc" id="L75">    private final Map&lt;String, Availability&gt; availability = new LinkedHashMap&lt;&gt;();</span>
+
+    /** Events keyed by ID, in insertion order. */
+<span class="fc" id="L78">    private final Map&lt;String, Event&gt; events = new LinkedHashMap&lt;&gt;();</span>
+
+    /**
+     * Creates a store over already-validated data.
+     *
+     * @param file the data file
+     * @param data the contents to start with
+     */
+<span class="fc" id="L86">    private JsonDataStore(Path file, Contents data) {</span>
+<span class="fc" id="L87">        this.file = file;</span>
+<span class="fc" id="L88">        replaceWith(data);</span>
+<span class="fc" id="L89">    }</span>
+
+    /**
+     * Opens the data file, or starts empty if it does not exist.
+     *
+     * @param file      path of the data file
+     * @param catalogue rooms to use when the file does not exist yet
+     * @return the opened store
+     * @throws StorageException if the file exists but cannot be read or is corrupt; the file is left unchanged
+     */
+    public static JsonDataStore open(Path file, List&lt;Room&gt; catalogue) {
+<span class="fc bfc" id="L100" title="All 2 branches covered.">        if (!Files.exists(file)) {</span>
+<span class="fc" id="L101">            return new JsonDataStore(file, new Contents(catalogue, List.of(), List.of(), List.of()));</span>
+        }
+<span class="fc" id="L103">        try (InputStream in = Files.newInputStream(file)) {</span>
+<span class="fc" id="L104">            return new JsonDataStore(file, read(in, &quot;Data file &quot; + file));</span>
+<span class="nc" id="L105">        } catch (IOException e) {</span>
+<span class="nc" id="L106">            throw new StorageException(&quot;Could not read data file &quot; + file + &quot;: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    /**
+     * Renames an unusable data file so the application can start empty, keeping its contents
+     * for later repair. The new name adds {@code .corrupt-&lt;timestamp&gt;}, so earlier set-aside files are never replaced.
+     *
+     * @param file the data file to set aside
+     * @return where the file now is
+     * @throws StorageException if the file cannot be renamed; it is then left where it was
+     */
+    public static Path setAside(Path file) {
+<span class="fc" id="L119">        String stamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern(&quot;yyyyMMdd-HHmmss&quot;));</span>
+<span class="fc" id="L120">        Path target = file.resolveSibling(file.getFileName() + &quot;.corrupt-&quot; + stamp);</span>
+<span class="pc bpc" id="L121" title="1 of 2 branches missed.">        for (int n = 2; Files.exists(target); n++) {</span>
+<span class="nc" id="L122">            target = file.resolveSibling(file.getFileName() + &quot;.corrupt-&quot; + stamp + &quot;-&quot; + n);</span>
+        }
+        try {
+<span class="fc" id="L125">            return Files.move(file, target);</span>
+<span class="nc" id="L126">        } catch (IOException e) {</span>
+<span class="nc" id="L127">            throw new StorageException(&quot;Could not set aside &quot; + file + &quot;: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    /**
+     * Whether there are no students, availability, or events. Rooms do not count.
+     *
+     * @return true if the application has no data of its own yet
+     */
+    public boolean isEmpty() {
+<span class="pc bpc" id="L137" title="2 of 6 branches missed.">        return students.isEmpty() &amp;&amp; availability.isEmpty() &amp;&amp; events.isEmpty();</span>
+    }
+
+    /**
+     * Replaces the contents of an empty store with seed data and saves it.
+     *
+     * @param seed UTF-8 JSON in the data file format; the stream is not closed
+     * @throws ValidationException if the store is not empty
+     * @throws StorageException    if the seed data is corrupt or cannot be saved; the store is unchanged
+     */
+    public void loadSeed(InputStream seed) {
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        if (!isEmpty()) {</span>
+<span class="fc" id="L149">            throw new ValidationException(&quot;Seed data can only be loaded into an empty application.&quot;);</span>
+        }
+<span class="fc" id="L151">        Contents loaded = read(seed, &quot;Seed data&quot;);</span>
+<span class="fc" id="L152">        Contents previous = snapshot();</span>
+<span class="fc" id="L153">        replaceWith(loaded);</span>
+        try {
+<span class="fc" id="L155">            persist();</span>
+<span class="nc" id="L156">        } catch (StorageException e) {</span>
+<span class="nc" id="L157">            replaceWith(previous);</span>
+<span class="nc" id="L158">            throw e;</span>
+<span class="fc" id="L159">        }</span>
+<span class="fc" id="L160">    }</span>
+
+    /** @return the room catalogue */
+    public RoomRepository rooms() {
+<span class="fc" id="L164">        return () -&gt; rooms;</span>
+    }
+
+    /** @return student storage backed by this file */
+    public StudentRepository students() {
+<span class="fc" id="L169">        return new StudentRepository() {</span>
+            @Override
+            public List&lt;Student&gt; findAll() {
+<span class="fc" id="L172">                return List.copyOf(students.values());</span>
+            }
+
+            @Override
+            public Optional&lt;Student&gt; findById(String id) {
+<span class="fc" id="L177">                return Optional.ofNullable(students.get(id));</span>
+            }
+
+            @Override
+            public void save(Student student) {
+<span class="fc" id="L182">                saveInto(students, student.id(), student);</span>
+<span class="fc" id="L183">            }</span>
+        };
+    }
+
+    /** @return availability storage backed by this file */
+    public AvailabilityRepository availability() {
+<span class="fc" id="L189">        return new AvailabilityRepository() {</span>
+            @Override
+            public List&lt;Availability&gt; findAll() {
+<span class="fc" id="L192">                return List.copyOf(availability.values());</span>
+            }
+
+            @Override
+            public Optional&lt;Availability&gt; findByStudentId(String studentId) {
+<span class="fc" id="L197">                return Optional.ofNullable(availability.get(studentId));</span>
+            }
+
+            @Override
+            public void save(Availability entry) {
+<span class="fc" id="L202">                saveInto(availability, entry.studentId(), entry);</span>
+<span class="fc" id="L203">            }</span>
+        };
+    }
+
+    /** @return event storage backed by this file */
+    public EventRepository events() {
+<span class="fc" id="L209">        return new EventRepository() {</span>
+            @Override
+            public List&lt;Event&gt; findAll() {
+<span class="fc" id="L212">                return List.copyOf(events.values());</span>
+            }
+
+            @Override
+            public Optional&lt;Event&gt; findById(String id) {
+<span class="fc" id="L217">                return Optional.ofNullable(events.get(id));</span>
+            }
+
+            @Override
+            public void save(Event event) {
+<span class="fc" id="L222">                saveInto(events, event.id(), event);</span>
+<span class="fc" id="L223">            }</span>
+        };
+    }
+
+    /**
+     * Stores a value and writes the file; on failure the previous value is restored.
+     *
+     * @param map   the collection being changed
+     * @param key   the record's key
+     * @param value the new record
+     * @param &lt;T&gt;   record type
+     * @throws StorageException if the file cannot be written
+     */
+    private &lt;T&gt; void saveInto(Map&lt;String, T&gt; map, String key, T value) {
+<span class="fc bfc" id="L237" title="All 2 branches covered.">        if (value.equals(map.get(key))) {</span>
+<span class="fc" id="L238">            return; // Nothing changed, so the file is not rewritten.</span>
+        }
+<span class="fc" id="L240">        T previous = map.put(key, value);</span>
+        try {
+<span class="fc" id="L242">            persist();</span>
+<span class="fc" id="L243">        } catch (StorageException e) {</span>
+<span class="fc bfc" id="L244" title="All 2 branches covered.">            if (previous == null) {</span>
+<span class="fc" id="L245">                map.remove(key);</span>
+            } else {
+<span class="fc" id="L247">                map.put(key, previous);</span>
+            }
+<span class="fc" id="L249">            throw e;</span>
+<span class="fc" id="L250">        }</span>
+<span class="fc" id="L251">    }</span>
+
+    /**
+     * Writes all data to a temporary file, then moves it over the data file.
+     *
+     * @throws StorageException if writing or moving fails; the previous data file is kept
+     */
+    private void persist() {
+<span class="fc" id="L259">        Path temp = file.resolveSibling(file.getFileName() + &quot;.tmp&quot;);</span>
+        try {
+<span class="pc bpc" id="L261" title="1 of 2 branches missed.">            if (file.getParent() != null) {</span>
+<span class="fc" id="L262">                Files.createDirectories(file.getParent());</span>
+            }
+            // writeValueAsBytes always encodes as UTF-8.
+<span class="fc" id="L265">            Files.write(temp, MAPPER.writeValueAsBytes(toJson(snapshot())));</span>
+            try {
+<span class="fc" id="L267">                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);</span>
+<span class="nc" id="L268">            } catch (AtomicMoveNotSupportedException e) {</span>
+<span class="nc" id="L269">                Files.move(temp, file, StandardCopyOption.REPLACE_EXISTING);</span>
+<span class="fc" id="L270">            }</span>
+<span class="fc" id="L271">        } catch (IOException e) {</span>
+<span class="fc" id="L272">            deleteTempQuietly(temp);</span>
+<span class="fc" id="L273">            throw new StorageException(&quot;Could not save data to &quot; + file + &quot;: &quot; + e.getMessage()</span>
+                    + &quot;. The previous saved data was kept.&quot;, e);
+<span class="fc" id="L275">        }</span>
+<span class="fc" id="L276">    }</span>
+
+    /**
+     * Removes a leftover temporary file, ignoring errors. Leaves anything that is not a regular file alone.
+     *
+     * @param temp the temporary file
+     */
+    private static void deleteTempQuietly(Path temp) {
+        try {
+<span class="pc bpc" id="L285" title="1 of 2 branches missed.">            if (Files.isRegularFile(temp)) {</span>
+<span class="nc" id="L286">                Files.delete(temp);</span>
+            }
+<span class="nc" id="L288">        } catch (IOException ignored) {</span>
+            // The next save overwrites it anyway.
+<span class="fc" id="L290">        }</span>
+<span class="fc" id="L291">    }</span>
+
+    /** @return a copy of the current contents */
+    private Contents snapshot() {
+<span class="fc" id="L295">        return new Contents(rooms, List.copyOf(students.values()),</span>
+<span class="fc" id="L296">                List.copyOf(availability.values()), List.copyOf(events.values()));</span>
+    }
+
+    /**
+     * Replaces every collection with the given contents.
+     *
+     * @param data the new contents
+     */
+    private void replaceWith(Contents data) {
+<span class="fc" id="L305">        rooms = List.copyOf(data.rooms());</span>
+<span class="fc" id="L306">        students.clear();</span>
+<span class="fc" id="L307">        data.students().forEach(s -&gt; students.put(s.id(), s));</span>
+<span class="fc" id="L308">        availability.clear();</span>
+<span class="fc" id="L309">        data.availability().forEach(a -&gt; availability.put(a.studentId(), a));</span>
+<span class="fc" id="L310">        events.clear();</span>
+<span class="fc" id="L311">        data.events().forEach(e -&gt; events.put(e.id(), e));</span>
+<span class="fc" id="L312">    }</span>
+
+    /**
+     * Parses and fully validates data in the file format.
+     *
+     * @param in     UTF-8 JSON; not closed
+     * @param source what is being read, for error messages, such as &quot;Data file campusplan.json&quot;
+     * @return the validated contents
+     * @throws StorageException if the JSON is malformed, the version is unknown, or a rule is broken
+     */
+    private static Contents read(InputStream in, String source) {
+        DataFileJson json;
+        try {
+<span class="fc" id="L325">            json = MAPPER.readValue(in, DataFileJson.class);</span>
+<span class="fc" id="L326">        } catch (JsonProcessingException e) {</span>
+            // Also covers a ValidationException thrown by a record constructor during parsing.
+<span class="pc bpc" id="L328" title="1 of 2 branches missed.">            String where = e.getLocation() == null ? &quot;&quot;</span>
+<span class="fc" id="L329">                    : &quot; at line &quot; + e.getLocation().getLineNr() + &quot;, column &quot; + e.getLocation().getColumnNr();</span>
+<span class="fc" id="L330">            throw new StorageException(source + &quot; is corrupt&quot; + where + &quot;: &quot; + e.getOriginalMessage(), e);</span>
+<span class="nc" id="L331">        } catch (IOException e) {</span>
+<span class="nc" id="L332">            throw new StorageException(&quot;Could not read &quot; + source + &quot;: &quot; + e.getMessage(), e);</span>
+<span class="fc" id="L333">        }</span>
+<span class="fc bfc" id="L334" title="All 2 branches covered.">        if (json == null) {</span>
+<span class="fc" id="L335">            throw new StorageException(source + &quot; is corrupt: expected a JSON object.&quot;);</span>
+        }
+<span class="fc bfc" id="L337" title="All 2 branches covered.">        if (json.formatVersion() != FORMAT_VERSION) {</span>
+<span class="fc" id="L338">            throw new StorageException(source + &quot; has unsupported format version &quot; + json.formatVersion()</span>
+                    + &quot;; expected &quot; + FORMAT_VERSION + &quot;.&quot;);
+        }
+        try {
+<span class="fc" id="L342">            Contents data = fromJson(json);</span>
+<span class="fc" id="L343">            checkConsistent(data);</span>
+<span class="fc" id="L344">            return data;</span>
+<span class="fc" id="L345">        } catch (ValidationException | DateTimeParseException | StorageException e) {</span>
+<span class="fc" id="L346">            throw new StorageException(source + &quot; is corrupt: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    /**
+     * Checks rules that span records: unique IDs and emails, and references to existing students.
+     *
+     * @param data the parsed contents
+     * @throws StorageException naming the first problem found
+     */
+    private static void checkConsistent(Contents data) {
+<span class="fc" id="L357">        JsonRoomRepository.checkUnique(data.rooms());</span>
+<span class="fc" id="L358">        Set&lt;String&gt; studentIds = unique(data.students(), Student::id, &quot;student ID&quot;);</span>
+<span class="fc" id="L359">        unique(data.students(), Student::email, &quot;student email&quot;);</span>
+<span class="fc" id="L360">        unique(data.availability(), Availability::studentId, &quot;availability entry for student&quot;);</span>
+<span class="fc" id="L361">        unique(data.events(), Event::id, &quot;event ID&quot;);</span>
+<span class="fc bfc" id="L362" title="All 2 branches covered.">        for (Availability entry : data.availability()) {</span>
+<span class="fc" id="L363">            requireStudent(studentIds, entry.studentId(), &quot;Availability&quot;);</span>
+<span class="fc" id="L364">        }</span>
+<span class="fc bfc" id="L365" title="All 2 branches covered.">        for (Event event : data.events()) {</span>
+<span class="fc bfc" id="L366" title="All 2 branches covered.">            for (String invitee : event.details().inviteeIds()) {</span>
+<span class="fc" id="L367">                requireStudent(studentIds, invitee, &quot;Event &quot; + event.id());</span>
+<span class="fc" id="L368">            }</span>
+<span class="fc" id="L369">        }</span>
+<span class="fc" id="L370">    }</span>
+
+    /**
+     * Collects keys, rejecting the first one that repeats.
+     *
+     * @param records records to check
+     * @param key     extracts the key that must be unique
+     * @param what    name of the key for the error message
+     * @param &lt;T&gt;     record type
+     * @return the set of keys
+     * @throws StorageException if a key repeats
+     */
+    private static &lt;T&gt; Set&lt;String&gt; unique(List&lt;T&gt; records, Function&lt;T, String&gt; key, String what) {
+<span class="fc" id="L383">        Set&lt;String&gt; seen = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L384" title="All 2 branches covered.">        for (T record : records) {</span>
+<span class="fc bfc" id="L385" title="All 2 branches covered.">            if (!seen.add(key.apply(record))) {</span>
+<span class="fc" id="L386">                throw new StorageException(&quot;duplicate &quot; + what + &quot; &quot; + key.apply(record) + &quot;.&quot;);</span>
+            }
+<span class="fc" id="L388">        }</span>
+<span class="fc" id="L389">        return seen;</span>
+    }
+
+    /**
+     * Rejects a reference to a student that is not in the file.
+     *
+     * @param studentIds IDs of every stored student
+     * @param id         the referenced ID
+     * @param owner      what holds the reference, for the error message
+     * @throws StorageException if the student does not exist
+     */
+    private static void requireStudent(Set&lt;String&gt; studentIds, String id, String owner) {
+<span class="fc bfc" id="L401" title="All 2 branches covered.">        if (!studentIds.contains(id)) {</span>
+<span class="fc" id="L402">            throw new StorageException(owner + &quot; refers to unknown student &quot; + id + &quot;.&quot;);</span>
+        }
+<span class="fc" id="L404">    }</span>
+
+    /**
+     * Converts the file format into domain records, validating each one.
+     *
+     * @param json the parsed file
+     * @return the domain contents
+     * @throws ValidationException    if a record breaks a domain rule
+     * @throws DateTimeParseException if a date or time is malformed
+     */
+    private static Contents fromJson(DataFileJson json) {
+<span class="fc" id="L415">        List&lt;Availability&gt; availability = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L416" title="All 2 branches covered.">        for (AvailabilityJson entry : orEmpty(json.availability())) {</span>
+<span class="fc" id="L417">            List&lt;AvailabilityInterval&gt; intervals = orEmpty(entry.intervals()).stream()</span>
+<span class="fc" id="L418">                    .map(i -&gt; new AvailabilityInterval(LocalDate.parse(i.date()),</span>
+<span class="fc" id="L419">                            LocalTime.parse(i.start()), LocalTime.parse(i.end())))</span>
+<span class="fc" id="L420">                    .toList();</span>
+<span class="fc" id="L421">            availability.add(new Availability(entry.studentId(), intervals));</span>
+<span class="fc" id="L422">        }</span>
+<span class="fc" id="L423">        List&lt;Event&gt; events = new ArrayList&lt;&gt;();</span>
+<span class="fc bfc" id="L424" title="All 2 branches covered.">        for (EventJson e : orEmpty(json.events())) {</span>
+<span class="fc" id="L425">            EventDetails details = new EventDetails(e.title(), e.inviteeIds(),</span>
+<span class="fc" id="L426">                    LocalDate.parse(e.firstDay()), LocalDate.parse(e.lastDay()),</span>
+<span class="fc" id="L427">                    e.durationMinutes(), e.requiredFeatures(), e.minimumAttendance());</span>
+<span class="pc bpc" id="L428" title="1 of 2 branches missed.">            events.add(new Event(e.id(), details, e.status(), e.responses() == null ? Map.of() : e.responses()));</span>
+<span class="fc" id="L429">        }</span>
+<span class="fc" id="L430">        return new Contents(orEmpty(json.rooms()), orEmpty(json.students()), availability, events);</span>
+    }
+
+    /**
+     * Converts domain records into the file format.
+     *
+     * @param data the contents to save
+     * @return the file representation
+     */
+    private static DataFileJson toJson(Contents data) {
+<span class="fc" id="L440">        List&lt;AvailabilityJson&gt; availability = data.availability().stream()</span>
+<span class="fc" id="L441">                .map(a -&gt; new AvailabilityJson(a.studentId(), a.intervals().stream()</span>
+<span class="fc" id="L442">                        .map(i -&gt; new IntervalJson(i.date().toString(), i.start().toString(), i.end().toString()))</span>
+<span class="fc" id="L443">                        .toList()))</span>
+<span class="fc" id="L444">                .toList();</span>
+<span class="fc" id="L445">        List&lt;EventJson&gt; events = data.events().stream()</span>
+<span class="fc" id="L446">                .map(e -&gt; new EventJson(e.id(), e.details().title(), e.details().inviteeIds(),</span>
+<span class="fc" id="L447">                        e.details().firstDay().toString(), e.details().lastDay().toString(),</span>
+<span class="fc" id="L448">                        e.details().durationMinutes(), e.details().requiredFeatures(),</span>
+<span class="fc" id="L449">                        e.details().minimumAttendance(), e.status(), e.responses()))</span>
+<span class="fc" id="L450">                .toList();</span>
+<span class="fc" id="L451">        return new DataFileJson(FORMAT_VERSION, data.rooms(), data.students(), availability, events);</span>
+    }
+
+    /**
+     * Treats a missing JSON array as empty.
+     *
+     * @param list the parsed list, possibly null
+     * @param &lt;T&gt;  element type
+     * @return the list, or an empty list
+     */
+    private static &lt;T&gt; List&lt;T&gt; orEmpty(List&lt;T&gt; list) {
+<span class="pc bpc" id="L462" title="1 of 2 branches missed.">        return list == null ? List.of() : list;</span>
+    }
+
+    /** Everything the store holds, as domain records. */
+<span class="fc" id="L466">    private record Contents(List&lt;Room&gt; rooms, List&lt;Student&gt; students,</span>
+                            List&lt;Availability&gt; availability, List&lt;Event&gt; events) {
+    }
+
+    /** Top-level shape of the data file. Rooms and students are written as their domain records. */
+<span class="fc" id="L471">    record DataFileJson(int formatVersion, List&lt;Room&gt; rooms, List&lt;Student&gt; students,</span>
+                        List&lt;AvailabilityJson&gt; availability, List&lt;EventJson&gt; events) {
+    }
+
+    /** One student's availability in the data file. */
+<span class="fc" id="L476">    record AvailabilityJson(String studentId, List&lt;IntervalJson&gt; intervals) {</span>
+    }
+
+    /** One availability interval in the data file, with ISO date and HH:mm times. */
+<span class="fc" id="L480">    record IntervalJson(String date, String start, String end) {</span>
+    }
+
+    /** One event in the data file, with ISO dates. */
+<span class="fc" id="L484">    record EventJson(String id, String title, List&lt;String&gt; inviteeIds, String firstDay, String lastDay,</span>
+                     int durationMinutes, Set&lt;RoomFeature&gt; requiredFeatures, int minimumAttendance,
+                     EventStatus status, Map&lt;String, AttendanceResponse&gt; responses) {
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

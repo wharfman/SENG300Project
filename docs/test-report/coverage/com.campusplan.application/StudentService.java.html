@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>StudentService.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.application</a> &gt; <span class="el_source">StudentService.java</span></div><h1>StudentService.java</h1><pre class="source lang-java linenums">/*
+ * StudentService.java
+ *
+ * Application-layer service for the student workflows: create, edit, view, and search.
+ * Enforces rules that span more than one student, such as unique emails.
+ */
+package com.campusplan.application;
+
+import com.campusplan.domain.Student;
+import com.campusplan.domain.ValidationException;
+import com.campusplan.persistence.StudentRepository;
+
+import java.util.List;
+import java.util.Locale;
+
+/**
+ * Student operations used by the user interface. Field rules are checked by {@link Student};
+ * this class adds ID generation and email uniqueness. A rejected operation leaves storage unchanged.
+ */
+public class StudentService {
+
+    /** Where students are stored. */
+    private final StudentRepository repository;
+
+    /**
+     * Creates a service over the given storage.
+     *
+     * @param repository student storage
+     */
+<span class="fc" id="L30">    public StudentService(StudentRepository repository) {</span>
+<span class="fc" id="L31">        this.repository = repository;</span>
+<span class="fc" id="L32">    }</span>
+
+    /**
+     * Creates and stores a new student with a generated ID.
+     *
+     * @param name  the name as entered
+     * @param email the email as entered
+     * @return the stored student, with normalized fields
+     * @throws ValidationException if a field is invalid or the email is already used
+     */
+    public Student create(String name, String email) {
+<span class="fc" id="L43">        Student student = new Student(nextId(), name, email);</span>
+<span class="fc" id="L44">        ensureEmailUnused(student.email(), student.id());</span>
+<span class="fc" id="L45">        repository.save(student);</span>
+<span class="fc" id="L46">        return student;</span>
+    }
+
+    /**
+     * Replaces the name and email of an existing student. The ID never changes.
+     *
+     * @param id    ID of the student to edit
+     * @param name  the new name as entered
+     * @param email the new email as entered; may be the student's current email
+     * @return the stored, updated student
+     * @throws ValidationException if no student has the ID, a field is invalid,
+     *                             or the email belongs to another student
+     */
+    public Student edit(String id, String name, String email) {
+<span class="fc" id="L60">        Student existing = get(id);</span>
+<span class="fc" id="L61">        Student updated = new Student(existing.id(), name, email);</span>
+<span class="fc" id="L62">        ensureEmailUnused(updated.email(), updated.id());</span>
+<span class="fc" id="L63">        repository.save(updated);</span>
+<span class="fc" id="L64">        return updated;</span>
+    }
+
+    /**
+     * Looks up a student by ID, ignoring surrounding whitespace.
+     *
+     * @param id the student ID as entered
+     * @return the matching student
+     * @throws ValidationException if no student has the ID
+     */
+    public Student get(String id) {
+<span class="pc bpc" id="L75" title="1 of 2 branches missed.">        String trimmed = id == null ? &quot;&quot; : id.trim();</span>
+<span class="fc" id="L76">        return repository.findById(trimmed)</span>
+<span class="fc" id="L77">                .orElseThrow(() -&gt; new ValidationException(&quot;No student with ID &quot; + trimmed + &quot;.&quot;));</span>
+    }
+
+    /**
+     * Case-insensitive partial match on name or email. A blank query matches every student.
+     *
+     * @param query text to look for, ignoring surrounding whitespace
+     * @return matching students, in storage order
+     */
+    public List&lt;Student&gt; search(String query) {
+<span class="pc bpc" id="L87" title="1 of 2 branches missed.">        String needle = query == null ? &quot;&quot; : query.trim().toLowerCase(Locale.ROOT);</span>
+        // Stored emails are already lowercase, so only the name needs lowercasing.
+<span class="fc" id="L89">        return repository.findAll().stream()</span>
+<span class="fc bfc" id="L90" title="All 2 branches covered.">                .filter(s -&gt; s.name().toLowerCase(Locale.ROOT).contains(needle)</span>
+<span class="fc bfc" id="L91" title="All 2 branches covered.">                        || s.email().contains(needle))</span>
+<span class="fc" id="L92">                .toList();</span>
+    }
+
+    /**
+     * Rejects an email that another student already uses.
+     *
+     * @param email normalized email to check
+     * @param ownId ID of the student being saved, whose own email does not count as a conflict
+     * @throws ValidationException if a different student has the email
+     */
+    private void ensureEmailUnused(String email, String ownId) {
+<span class="fc" id="L103">        boolean taken = repository.findAll().stream()</span>
+<span class="fc bfc" id="L104" title="All 4 branches covered.">                .anyMatch(s -&gt; s.email().equals(email) &amp;&amp; !s.id().equals(ownId));</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">        if (taken) {</span>
+<span class="fc" id="L106">            throw new ValidationException(&quot;Email &quot; + email + &quot; is already used by another student.&quot;);</span>
+        }
+<span class="fc" id="L108">    }</span>
+
+    /**
+     * IDs are S001, S002, ...; the next one follows the highest existing number.
+     *
+     * @return the next unused student ID
+     */
+    private String nextId() {
+<span class="fc" id="L116">        int max = repository.findAll().stream()</span>
+<span class="fc" id="L117">                .map(Student::id)</span>
+<span class="fc" id="L118">                .filter(id -&gt; id.matches(&quot;S\\d+&quot;))</span>
+<span class="fc" id="L119">                .mapToInt(id -&gt; Integer.parseInt(id.substring(1)))</span>
+<span class="fc" id="L120">                .max()</span>
+<span class="fc" id="L121">                .orElse(0);</span>
+<span class="fc" id="L122">        return String.format(&quot;S%03d&quot;, max + 1);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

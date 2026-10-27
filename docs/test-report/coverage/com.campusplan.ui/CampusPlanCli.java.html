@@ -1,0 +1,521 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>CampusPlanCli.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.ui</a> &gt; <span class="el_source">CampusPlanCli.java</span></div><h1>CampusPlanCli.java</h1><pre class="source lang-java linenums">/*
+ * CampusPlanCli.java
+ *
+ * User-interface layer: the interactive, menu-driven command-line interface through
+ * which the organizer runs every CampusPlan workflow.
+ */
+package com.campusplan.ui;
+
+import com.campusplan.application.AvailabilityService;
+import com.campusplan.application.EventService;
+import com.campusplan.application.RoomService;
+import com.campusplan.application.SeedLoader;
+import com.campusplan.application.StudentService;
+import com.campusplan.domain.AvailabilityInterval;
+import com.campusplan.domain.Event;
+import com.campusplan.domain.EventDetails;
+import com.campusplan.domain.Room;
+import com.campusplan.domain.RoomFeature;
+import com.campusplan.domain.Student;
+import com.campusplan.domain.ValidationException;
+import com.campusplan.persistence.StorageException;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.PrintStream;
+import java.io.UncheckedIOException;
+import java.time.LocalDate;
+import java.time.LocalTime;
+import java.time.format.DateTimeParseException;
+import java.util.Arrays;
+import java.util.EnumSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import java.util.TreeMap;
+import java.util.stream.Collectors;
+
+/**
+ * Menu-driven text interface. Reaching end of input quits.
+ *
+ * &lt;p&gt;Input and output are injected so the CLI can be driven by tests. Rule violations and
+ * storage failures are reported as {@code Error: ...} lines and the menu is shown again;
+ * they never end the session. Every change is saved by the storage layer as it happens.
+ */
+public class CampusPlanCli {
+
+    /** Main menu, printed before every prompt for an option. */
+    private static final String MENU = &quot;&quot;&quot;
+
+            CampusPlan
+              1. Add student
+              2. Edit student
+              3. View student
+              4. Search students
+              5. List rooms
+              6. Filter rooms
+              7. Add availability
+              8. Remove availability
+              9. View availability
+             10. Create draft event
+             11. Edit draft event
+             12. View event
+             13. List events
+              0. Quit&quot;&quot;&quot;;
+
+    /** Student workflows. */
+    private final StudentService students;
+    /** Room catalogue queries. */
+    private final RoomService rooms;
+    /** Availability workflows. */
+    private final AvailabilityService availability;
+    /** Draft event workflows. */
+    private final EventService events;
+    /** Offers sample data when the application starts empty. */
+    private final SeedLoader seed;
+    /** Operator input, read one line per prompt. */
+    private final BufferedReader in;
+    /** Prompts and results. */
+    private final PrintStream out;
+
+    /**
+     * Creates a CLI over the given services and streams.
+     *
+     * @param students     student workflows
+     * @param rooms        room catalogue queries
+     * @param availability availability workflows
+     * @param events       draft event workflows
+     * @param seed         seed data offered at startup; {@link SeedLoader#NONE} to never offer it
+     * @param in           operator input
+     * @param out          destination for prompts and results
+     */
+    public CampusPlanCli(StudentService students, RoomService rooms, AvailabilityService availability,
+<span class="fc" id="L93">                         EventService events, SeedLoader seed, BufferedReader in, PrintStream out) {</span>
+<span class="fc" id="L94">        this.students = students;</span>
+<span class="fc" id="L95">        this.rooms = rooms;</span>
+<span class="fc" id="L96">        this.availability = availability;</span>
+<span class="fc" id="L97">        this.events = events;</span>
+<span class="fc" id="L98">        this.seed = seed;</span>
+<span class="fc" id="L99">        this.in = in;</span>
+<span class="fc" id="L100">        this.out = out;</span>
+<span class="fc" id="L101">    }</span>
+
+    /** Offers seed data if the application is empty, then handles menu choices until the operator quits. */
+    public void run() {
+<span class="fc" id="L105">        offerSeed();</span>
+        while (true) {
+<span class="fc" id="L107">            out.println(MENU);</span>
+<span class="fc" id="L108">            String choice = prompt(&quot;Choose an option&quot;);</span>
+<span class="fc bfc" id="L109" title="All 4 branches covered.">            if (choice == null || choice.equals(&quot;0&quot;)) {</span>
+<span class="fc" id="L110">                out.println(&quot;Goodbye.&quot;);</span>
+<span class="fc" id="L111">                return;</span>
+            }
+            try {
+<span class="fc bfc" id="L114" title="All 14 branches covered.">                switch (choice) {</span>
+<span class="fc" id="L115">                    case &quot;1&quot; -&gt; addStudent();</span>
+<span class="fc" id="L116">                    case &quot;2&quot; -&gt; editStudent();</span>
+<span class="fc" id="L117">                    case &quot;3&quot; -&gt; viewStudent();</span>
+<span class="fc" id="L118">                    case &quot;4&quot; -&gt; printStudents(students.search(promptOrEmpty(&quot;Name or email contains&quot;)));</span>
+<span class="fc" id="L119">                    case &quot;5&quot; -&gt; printRooms(rooms.list());</span>
+<span class="fc" id="L120">                    case &quot;6&quot; -&gt; filterRooms();</span>
+<span class="fc" id="L121">                    case &quot;7&quot; -&gt; changeAvailability(true);</span>
+<span class="fc" id="L122">                    case &quot;8&quot; -&gt; changeAvailability(false);</span>
+<span class="fc" id="L123">                    case &quot;9&quot; -&gt; viewAvailability();</span>
+<span class="fc" id="L124">                    case &quot;10&quot; -&gt; createEvent();</span>
+<span class="fc" id="L125">                    case &quot;11&quot; -&gt; editEvent();</span>
+<span class="fc" id="L126">                    case &quot;12&quot; -&gt; viewEvent();</span>
+<span class="fc" id="L127">                    case &quot;13&quot; -&gt; listEvents();</span>
+<span class="fc" id="L128">                    default -&gt; out.println(&quot;Unknown option: &quot; + choice);</span>
+                }
+<span class="fc" id="L130">            } catch (ValidationException | StorageException e) {</span>
+<span class="fc" id="L131">                out.println(&quot;Error: &quot; + e.getMessage());</span>
+<span class="fc" id="L132">            }</span>
+<span class="fc" id="L133">        }</span>
+    }
+
+    /** When there is no saved data, offers each sample dataset or an empty start. Anything else starts empty. */
+    private void offerSeed() {
+<span class="fc bfc" id="L138" title="All 2 branches covered.">        if (!seed.canLoad()) {</span>
+<span class="fc" id="L139">            return;</span>
+        }
+<span class="fc" id="L141">        List&lt;String&gt; datasets = seed.datasets();</span>
+<span class="fc" id="L142">        out.println(&quot;No saved data found.&quot;);</span>
+<span class="fc bfc" id="L143" title="All 2 branches covered.">        for (int i = 0; i &lt; datasets.size(); i++) {</span>
+<span class="fc" id="L144">            out.println(&quot;  &quot; + (i + 1) + &quot;. &quot; + datasets.get(i));</span>
+        }
+<span class="fc" id="L146">        out.println(&quot;  &quot; + (datasets.size() + 1) + &quot;. Start with no data&quot;);</span>
+<span class="fc" id="L147">        String answer = promptOrEmpty(&quot;Choose how to start&quot;);</span>
+<span class="fc bfc" id="L148" title="All 2 branches covered.">        int index = answer.matches(&quot;\\d+&quot;) ? Integer.parseInt(answer) - 1 : -1;</span>
+<span class="fc bfc" id="L149" title="All 4 branches covered.">        if (index &lt; 0 || index &gt;= datasets.size()) {</span>
+<span class="fc" id="L150">            out.println(&quot;Starting with no data.&quot;);</span>
+<span class="fc" id="L151">            return;</span>
+        }
+        try {
+<span class="fc" id="L154">            seed.load(datasets.get(index));</span>
+<span class="fc" id="L155">            out.println(&quot;Loaded: &quot; + datasets.get(index));</span>
+<span class="nc" id="L156">        } catch (ValidationException | StorageException e) {</span>
+<span class="nc" id="L157">            out.println(&quot;Error: &quot; + e.getMessage());</span>
+<span class="fc" id="L158">        }</span>
+<span class="fc" id="L159">    }</span>
+
+    /** Prompts for a name and email and creates the student. */
+    private void addStudent() {
+<span class="fc" id="L163">        String name = promptOrEmpty(&quot;Name&quot;);</span>
+<span class="fc" id="L164">        String email = promptOrEmpty(&quot;Email&quot;);</span>
+<span class="fc" id="L165">        out.println(&quot;Created &quot; + format(students.create(name, email)));</span>
+<span class="fc" id="L166">    }</span>
+
+    /** Prompts for a student ID, then for new values; a blank answer keeps the current value. */
+    private void editStudent() {
+<span class="fc" id="L170">        Student existing = students.get(promptOrEmpty(&quot;Student ID&quot;));</span>
+<span class="fc" id="L171">        out.println(&quot;Editing &quot; + format(existing) + &quot; (leave blank to keep current value)&quot;);</span>
+<span class="fc" id="L172">        String name = promptOrEmpty(&quot;Name [&quot; + existing.name() + &quot;]&quot;);</span>
+<span class="fc" id="L173">        String email = promptOrEmpty(&quot;Email [&quot; + existing.email() + &quot;]&quot;);</span>
+        // A blank name or email is never valid, so blank can safely mean &quot;unchanged&quot;.
+<span class="fc" id="L175">        Student updated = students.edit(existing.id(),</span>
+<span class="pc bpc" id="L176" title="1 of 2 branches missed.">                name.isBlank() ? existing.name() : name,</span>
+<span class="pc bpc" id="L177" title="1 of 2 branches missed.">                email.isBlank() ? existing.email() : email);</span>
+<span class="fc" id="L178">        out.println(&quot;Updated &quot; + format(updated));</span>
+<span class="fc" id="L179">    }</span>
+
+    /** Prompts for a student ID and prints that student's details and availability. */
+    private void viewStudent() {
+<span class="fc" id="L183">        Student student = students.get(promptOrEmpty(&quot;Student ID&quot;));</span>
+<span class="fc" id="L184">        out.println(&quot;ID:    &quot; + student.id());</span>
+<span class="fc" id="L185">        out.println(&quot;Name:  &quot; + student.name());</span>
+<span class="fc" id="L186">        out.println(&quot;Email: &quot; + student.email());</span>
+<span class="fc" id="L187">        out.println(&quot;Availability:&quot;);</span>
+<span class="fc" id="L188">        printAvailability(availability.get(student.id()));</span>
+<span class="fc" id="L189">    }</span>
+
+    /** Prompts for a minimum capacity and required features and prints the matching rooms. */
+    private void filterRooms() {
+<span class="fc" id="L193">        String capacityInput = promptOrEmpty(&quot;Minimum capacity (blank for any)&quot;);</span>
+<span class="fc bfc" id="L194" title="All 2 branches covered.">        int minCapacity = capacityInput.isBlank() ? 1 : parseCapacity(capacityInput);</span>
+<span class="fc" id="L195">        String featureInput = promptOrEmpty(&quot;Required features, comma-separated &quot;</span>
+<span class="fc" id="L196">                + List.of(RoomFeature.values()) + &quot; (blank for none)&quot;);</span>
+<span class="fc" id="L197">        printRooms(rooms.filter(minCapacity, parseFeatures(featureInput)));</span>
+<span class="fc" id="L198">    }</span>
+
+    /**
+     * Prompts for a student and a time block, then adds or removes it.
+     *
+     * @param add true to add the time, false to remove it
+     */
+    private void changeAvailability(boolean add) {
+<span class="fc" id="L206">        Student student = students.get(promptOrEmpty(&quot;Student ID&quot;));</span>
+<span class="fc" id="L207">        LocalDate date = parseDate(promptOrEmpty(&quot;Date (YYYY-MM-DD)&quot;));</span>
+<span class="fc" id="L208">        LocalTime start = parseTime(promptOrEmpty(&quot;Start time (HH:MM)&quot;));</span>
+<span class="fc" id="L209">        LocalTime end = parseTime(promptOrEmpty(&quot;End time (HH:MM)&quot;));</span>
+<span class="fc" id="L210">        List&lt;AvailabilityInterval&gt; before = availability.get(student.id());</span>
+<span class="fc bfc" id="L211" title="All 2 branches covered.">        List&lt;AvailabilityInterval&gt; after = add</span>
+<span class="fc" id="L212">                ? availability.add(student.id(), date, start, end)</span>
+<span class="fc" id="L213">                : availability.remove(student.id(), date, start, end);</span>
+<span class="fc bfc" id="L214" title="All 2 branches covered.">        if (after.equals(before)) {</span>
+<span class="fc" id="L215">            out.println(&quot;Nothing changed: &quot; + student.id() + &quot; is already available &quot; + date + &quot; &quot; + start + &quot;-&quot; + end + &quot;.&quot;);</span>
+        } else {
+<span class="fc bfc" id="L217" title="All 2 branches covered.">            out.println((add ? &quot;Added&quot; : &quot;Removed&quot;) + &quot; availability for &quot; + student.id() + &quot;.&quot;);</span>
+        }
+<span class="fc" id="L219">        out.println(&quot;Availability for &quot; + student.id() + &quot; on &quot; + date + &quot;:&quot;);</span>
+<span class="fc" id="L220">        printAvailability(after.stream().filter(i -&gt; i.date().equals(date)).toList());</span>
+<span class="fc" id="L221">    }</span>
+
+    /** Prompts for a student ID and prints their availability. */
+    private void viewAvailability() {
+<span class="fc" id="L225">        Student student = students.get(promptOrEmpty(&quot;Student ID&quot;));</span>
+<span class="fc" id="L226">        out.println(&quot;Availability for &quot; + format(student) + &quot;:&quot;);</span>
+<span class="fc" id="L227">        printAvailability(availability.get(student.id()));</span>
+<span class="fc" id="L228">    }</span>
+
+    /** Prompts for every planning field and creates a draft event. */
+    private void createEvent() {
+<span class="fc" id="L232">        String title = promptOrEmpty(&quot;Title&quot;);</span>
+<span class="fc" id="L233">        List&lt;String&gt; invitees = parseIds(promptOrEmpty(&quot;Invitee student IDs, comma-separated&quot;));</span>
+<span class="fc" id="L234">        LocalDate firstDay = parseDate(promptOrEmpty(&quot;First day (YYYY-MM-DD)&quot;));</span>
+<span class="fc" id="L235">        String lastInput = promptOrEmpty(&quot;Last day (YYYY-MM-DD, blank for same day)&quot;);</span>
+<span class="fc bfc" id="L236" title="All 2 branches covered.">        LocalDate lastDay = lastInput.isBlank() ? firstDay : parseDate(lastInput);</span>
+<span class="fc" id="L237">        int duration = parseNumber(promptOrEmpty(&quot;Duration in minutes&quot;), &quot;Duration&quot;);</span>
+<span class="fc" id="L238">        Set&lt;RoomFeature&gt; features = parseFeatures(promptOrEmpty(&quot;Required features, comma-separated &quot;</span>
+<span class="fc" id="L239">                + List.of(RoomFeature.values()) + &quot; (blank for none)&quot;));</span>
+<span class="fc" id="L240">        int minimum = parseNumber(promptOrEmpty(&quot;Minimum attendance&quot;), &quot;Minimum attendance&quot;);</span>
+<span class="fc" id="L241">        Event event = events.create(new EventDetails(title, invitees, firstDay, lastDay, duration, features, minimum));</span>
+<span class="fc" id="L242">        out.println(&quot;Created draft &quot; + format(event));</span>
+<span class="fc" id="L243">        reportFittingRooms(event.details());</span>
+<span class="fc" id="L244">    }</span>
+
+    /**
+     * Tells the organizer how many rooms could host the event, or warns that none can.
+     *
+     * @param d the event's planning fields
+     */
+    private void reportFittingRooms(EventDetails d) {
+<span class="fc" id="L252">        int invitees = d.inviteeIds().size();</span>
+<span class="fc" id="L253">        int fitting = rooms.filter(invitees, d.requiredFeatures()).size();</span>
+<span class="fc bfc" id="L254" title="All 2 branches covered.">        if (fitting == 0) {</span>
+<span class="fc" id="L255">            out.println(&quot;Warning: no room seats all &quot; + invitees + &quot; invitees with the required features,&quot;</span>
+                    + &quot; so scheduling will not find any suggestions.&quot;);
+        } else {
+<span class="pc bpc" id="L258" title="1 of 2 branches missed.">            out.println(fitting + (fitting == 1 ? &quot; room seats&quot; : &quot; rooms seat&quot;) + &quot; all &quot; + invitees</span>
+<span class="pc bpc" id="L259" title="1 of 2 branches missed.">                    + &quot; invitees and &quot; + (fitting == 1 ? &quot;has&quot; : &quot;have&quot;) + &quot; the required features.&quot;);</span>
+        }
+<span class="fc" id="L261">    }</span>
+
+    /** Prompts for an event ID, then for new planning fields; a blank answer keeps the current value. */
+    private void editEvent() {
+<span class="fc" id="L265">        Event existing = events.get(promptOrEmpty(&quot;Event ID&quot;));</span>
+<span class="fc" id="L266">        EventDetails d = existing.details();</span>
+<span class="fc" id="L267">        out.println(&quot;Editing &quot; + format(existing) + &quot; (leave blank to keep current value)&quot;);</span>
+<span class="fc" id="L268">        String title = promptOrEmpty(&quot;Title [&quot; + d.title() + &quot;]&quot;);</span>
+<span class="fc" id="L269">        String invitees = promptOrEmpty(&quot;Invitee student IDs [&quot; + String.join(&quot;, &quot;, d.inviteeIds()) + &quot;]&quot;);</span>
+<span class="fc" id="L270">        String firstDay = promptOrEmpty(&quot;First day [&quot; + d.firstDay() + &quot;]&quot;);</span>
+<span class="fc" id="L271">        String lastDay = promptOrEmpty(&quot;Last day [&quot; + d.lastDay() + &quot;]&quot;);</span>
+<span class="fc" id="L272">        String duration = promptOrEmpty(&quot;Duration in minutes [&quot; + d.durationMinutes() + &quot;]&quot;);</span>
+<span class="fc" id="L273">        String features = promptOrEmpty(&quot;Required features [&quot; + formatFeatures(d.requiredFeatures())</span>
+                + &quot;] (type NONE to clear)&quot;);
+<span class="fc" id="L275">        String minimum = promptOrEmpty(&quot;Minimum attendance [&quot; + d.minimumAttendance() + &quot;]&quot;);</span>
+<span class="fc" id="L276">        EventDetails updated = new EventDetails(</span>
+<span class="fc bfc" id="L277" title="All 2 branches covered.">                title.isBlank() ? d.title() : title,</span>
+<span class="fc bfc" id="L278" title="All 2 branches covered.">                invitees.isBlank() ? d.inviteeIds() : parseIds(invitees),</span>
+<span class="pc bpc" id="L279" title="1 of 2 branches missed.">                firstDay.isBlank() ? d.firstDay() : parseDate(firstDay),</span>
+<span class="fc bfc" id="L280" title="All 2 branches covered.">                lastDay.isBlank() ? d.lastDay() : parseDate(lastDay),</span>
+<span class="fc bfc" id="L281" title="All 2 branches covered.">                duration.isBlank() ? d.durationMinutes() : parseNumber(duration, &quot;Duration&quot;),</span>
+                // Blank keeps the features, so clearing them needs an explicit word.
+<span class="pc bpc" id="L283" title="1 of 2 branches missed.">                features.isBlank() ? d.requiredFeatures()</span>
+<span class="nc bnc" id="L284" title="All 2 branches missed.">                        : features.equalsIgnoreCase(&quot;NONE&quot;) ? Set.of() : parseFeatures(features),</span>
+<span class="fc bfc" id="L285" title="All 2 branches covered.">                minimum.isBlank() ? d.minimumAttendance() : parseNumber(minimum, &quot;Minimum attendance&quot;));</span>
+<span class="fc" id="L286">        out.println(&quot;Updated &quot; + format(events.edit(existing.id(), updated)));</span>
+<span class="fc" id="L287">        reportFittingRooms(updated);</span>
+<span class="fc" id="L288">    }</span>
+
+    /** Prompts for an event ID and prints its details and each invitee's response. */
+    private void viewEvent() {
+<span class="fc" id="L292">        Event event = events.get(promptOrEmpty(&quot;Event ID&quot;));</span>
+<span class="fc" id="L293">        EventDetails d = event.details();</span>
+<span class="fc" id="L294">        out.println(&quot;ID:                 &quot; + event.id());</span>
+<span class="fc" id="L295">        out.println(&quot;Title:              &quot; + d.title());</span>
+<span class="fc" id="L296">        out.println(&quot;Status:             &quot; + event.status());</span>
+<span class="fc" id="L297">        out.println(&quot;Date window:        &quot; + d.firstDay() + &quot; to &quot; + d.lastDay() + &quot; (&quot; + d.windowDays() + &quot; days)&quot;);</span>
+<span class="fc" id="L298">        out.println(&quot;Duration:           &quot; + d.durationMinutes() + &quot; minutes&quot;);</span>
+<span class="fc" id="L299">        out.println(&quot;Required features:  &quot; + formatFeatures(d.requiredFeatures()));</span>
+<span class="fc" id="L300">        out.println(&quot;Minimum attendance: &quot; + d.minimumAttendance() + &quot; of &quot; + d.inviteeIds().size());</span>
+<span class="fc" id="L301">        out.println(&quot;Invitees:&quot;);</span>
+<span class="fc" id="L302">        event.responses().forEach((id, response) -&gt;</span>
+<span class="fc" id="L303">                out.printf(&quot;  %-5s %-30s %s%n&quot;, id, students.get(id).name(), response));</span>
+<span class="fc" id="L304">    }</span>
+
+    /** Prints one line per event, sorted by first day and then ID, or a message if there are none. */
+    private void listEvents() {
+<span class="fc" id="L308">        List&lt;Event&gt; all = events.list();</span>
+<span class="fc bfc" id="L309" title="All 2 branches covered.">        if (all.isEmpty()) {</span>
+<span class="fc" id="L310">            out.println(&quot;No events.&quot;);</span>
+<span class="fc" id="L311">            return;</span>
+        }
+<span class="fc" id="L313">        all.forEach(e -&gt; out.println(format(e) + &quot;  (&quot; + e.details().inviteeIds().size() + &quot; invitees)&quot;));</span>
+<span class="fc" id="L314">    }</span>
+
+    /**
+     * Parses a capacity typed by the operator.
+     *
+     * @param input trimmed, non-blank text
+     * @return the number entered
+     * @throws ValidationException if the text is not a whole number
+     */
+    private static int parseCapacity(String input) {
+        try {
+<span class="fc" id="L325">            return Integer.parseInt(input);</span>
+<span class="fc" id="L326">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L327">            throw new ValidationException(&quot;Minimum capacity must be a whole number.&quot;);</span>
+        }
+    }
+
+    /**
+     * Parses a whole number typed by the operator.
+     *
+     * @param input trimmed text
+     * @param field name of the field, for the error message
+     * @return the number entered
+     * @throws ValidationException if the text is not a whole number
+     */
+    private static int parseNumber(String input, String field) {
+        try {
+<span class="fc" id="L341">            return Integer.parseInt(input);</span>
+<span class="fc" id="L342">        } catch (NumberFormatException e) {</span>
+<span class="fc" id="L343">            throw new ValidationException(field + &quot; must be a whole number.&quot;);</span>
+        }
+    }
+
+    /**
+     * Parses an ISO date typed by the operator.
+     *
+     * @param input text such as {@code 2026-11-02}
+     * @return the date
+     * @throws ValidationException if the text is not a valid date
+     */
+    private static LocalDate parseDate(String input) {
+        try {
+<span class="fc" id="L356">            return LocalDate.parse(input);</span>
+<span class="fc" id="L357">        } catch (DateTimeParseException e) {</span>
+<span class="fc" id="L358">            throw new ValidationException(&quot;Date must be a real date written YYYY-MM-DD, such as 2026-11-02.&quot;);</span>
+        }
+    }
+
+    /**
+     * Parses a 24-hour time typed by the operator.
+     *
+     * @param input text such as {@code 09:30}
+     * @return the time
+     * @throws ValidationException if the text is not a valid time
+     */
+    private static LocalTime parseTime(String input) {
+        try {
+<span class="fc" id="L371">            return LocalTime.parse(input);</span>
+<span class="fc" id="L372">        } catch (DateTimeParseException e) {</span>
+<span class="fc" id="L373">            throw new ValidationException(&quot;Time must be written HH:MM in 24-hour time, such as 09:30.&quot;);</span>
+        }
+    }
+
+    /**
+     * Splits a comma-separated list of IDs, ignoring empty entries. IDs are trimmed later by the domain.
+     *
+     * @param input text such as {@code &quot;S001, S002&quot;}
+     * @return the IDs in the order typed
+     */
+    private static List&lt;String&gt; parseIds(String input) {
+<span class="pc bpc" id="L384" title="1 of 2 branches missed.">        return Arrays.stream(input.split(&quot;,&quot;)).map(String::trim).filter(s -&gt; !s.isEmpty()).toList();</span>
+    }
+
+    /**
+     * Parses a comma-separated list of feature names, ignoring case and empty entries.
+     *
+     * @param input text such as {@code &quot;whiteboard, projector&quot;}; blank means no features
+     * @return the features named
+     * @throws ValidationException if a name is not a {@link RoomFeature}
+     */
+    private static Set&lt;RoomFeature&gt; parseFeatures(String input) {
+<span class="fc" id="L395">        Set&lt;RoomFeature&gt; features = EnumSet.noneOf(RoomFeature.class);</span>
+<span class="fc bfc" id="L396" title="All 2 branches covered.">        for (String part : input.split(&quot;,&quot;)) {</span>
+<span class="fc" id="L397">            String name = part.trim();</span>
+<span class="fc bfc" id="L398" title="All 2 branches covered.">            if (name.isEmpty()) {</span>
+<span class="fc" id="L399">                continue;</span>
+            }
+            try {
+<span class="fc" id="L402">                features.add(RoomFeature.valueOf(name.toUpperCase(Locale.ROOT)));</span>
+<span class="fc" id="L403">            } catch (IllegalArgumentException e) {</span>
+<span class="fc" id="L404">                throw new ValidationException(&quot;Unknown room feature: &quot; + name + &quot;.&quot;);</span>
+<span class="fc" id="L405">            }</span>
+        }
+<span class="fc" id="L407">        return features;</span>
+    }
+
+    /**
+     * Prints rooms as an aligned table, or a message if there are none.
+     *
+     * @param list rooms to print
+     */
+    private void printRooms(List&lt;Room&gt; list) {
+<span class="fc bfc" id="L416" title="All 2 branches covered.">        if (list.isEmpty()) {</span>
+<span class="fc" id="L417">            out.println(&quot;No rooms match.&quot;);</span>
+<span class="fc" id="L418">            return;</span>
+        }
+<span class="fc" id="L420">        out.printf(&quot;%-5s %-30s %8s  %s%n&quot;, &quot;ID&quot;, &quot;Name&quot;, &quot;Capacity&quot;, &quot;Features&quot;);</span>
+<span class="fc bfc" id="L421" title="All 2 branches covered.">        for (Room room : list) {</span>
+<span class="fc" id="L422">            out.printf(&quot;%-5s %-30s %8d  %s%n&quot;, room.id(), room.name(), room.capacity(),</span>
+<span class="fc" id="L423">                    formatFeatures(room.features()));</span>
+<span class="fc" id="L424">        }</span>
+<span class="fc" id="L425">    }</span>
+
+    /**
+     * Prints one line per student, or a message if there are none.
+     *
+     * @param list students to print
+     */
+    private void printStudents(List&lt;Student&gt; list) {
+<span class="fc bfc" id="L433" title="All 2 branches covered.">        if (list.isEmpty()) {</span>
+<span class="fc" id="L434">            out.println(&quot;No students found.&quot;);</span>
+<span class="fc" id="L435">            return;</span>
+        }
+<span class="fc" id="L437">        list.forEach(s -&gt; out.println(format(s)));</span>
+<span class="fc" id="L438">    }</span>
+
+    /**
+     * Prints one line per date listing that date's intervals, or a message if there are none.
+     *
+     * @param list merged intervals to print, sorted by date and start
+     */
+    private void printAvailability(List&lt;AvailabilityInterval&gt; list) {
+<span class="fc bfc" id="L446" title="All 2 branches covered.">        if (list.isEmpty()) {</span>
+<span class="fc" id="L447">            out.println(&quot;  No availability entered.&quot;);</span>
+<span class="fc" id="L448">            return;</span>
+        }
+        // TreeMap keeps dates in order; intervals within a date are already sorted.
+<span class="fc" id="L451">        list.stream()</span>
+<span class="fc" id="L452">                .collect(Collectors.groupingBy(AvailabilityInterval::date, TreeMap::new,</span>
+<span class="fc" id="L453">                        Collectors.mapping(i -&gt; i.start() + &quot;-&quot; + i.end(), Collectors.joining(&quot;, &quot;))))</span>
+<span class="fc" id="L454">                .forEach((date, times) -&gt; out.println(&quot;  &quot; + date + &quot;  &quot; + times));</span>
+<span class="fc" id="L455">    }</span>
+
+    /**
+     * Formats a student as {@code ID  Name &lt;email&gt;}.
+     *
+     * @param s the student
+     * @return the one-line summary
+     */
+    private static String format(Student s) {
+<span class="fc" id="L464">        return s.id() + &quot;  &quot; + s.name() + &quot; &lt;&quot; + s.email() + &quot;&gt;&quot;;</span>
+    }
+
+    /**
+     * Formats an event as {@code ID  STATUS  first to last  Title}.
+     *
+     * @param e the event
+     * @return the one-line summary
+     */
+    private static String format(Event e) {
+<span class="fc" id="L474">        return e.id() + &quot;  &quot; + e.status() + &quot;  &quot; + e.details().firstDay() + &quot; to &quot; + e.details().lastDay()</span>
+<span class="fc" id="L475">                + &quot;  &quot; + e.details().title();</span>
+    }
+
+    /**
+     * Formats features as a comma-separated list, or a dash if there are none.
+     *
+     * @param features the features
+     * @return the display text
+     */
+    private static String formatFeatures(Set&lt;RoomFeature&gt; features) {
+<span class="fc bfc" id="L485" title="All 2 branches covered.">        return features.isEmpty() ? &quot;-&quot; : features.stream().map(Enum::name).collect(Collectors.joining(&quot;, &quot;));</span>
+    }
+
+    /**
+     * Prompts for a line, treating end of input as an empty answer.
+     *
+     * @param label prompt text, without the trailing colon
+     * @return the trimmed answer, or an empty string at end of input
+     */
+    private String promptOrEmpty(String label) {
+<span class="fc" id="L495">        String line = prompt(label);</span>
+<span class="pc bpc" id="L496" title="1 of 2 branches missed.">        return line == null ? &quot;&quot; : line;</span>
+    }
+
+    /**
+     * Prints a prompt and reads one line of input.
+     *
+     * @param label prompt text, without the trailing colon
+     * @return the trimmed answer, or null at end of input
+     * @throws UncheckedIOException if reading input fails
+     */
+    private String prompt(String label) {
+<span class="fc" id="L507">        out.print(label + &quot;: &quot;);</span>
+<span class="fc" id="L508">        out.flush();</span>
+        try {
+<span class="fc" id="L510">            String line = in.readLine();</span>
+<span class="fc bfc" id="L511" title="All 2 branches covered.">            if (line == null) {</span>
+<span class="fc" id="L512">                return null;</span>
+            }
+            // Input piped from a UTF-8 file or PowerShell can start with a byte-order mark; it is not operator text.
+<span class="fc" id="L515">            return line.replace(&quot;﻿&quot;, &quot;&quot;).trim();</span>
+<span class="nc" id="L516">        } catch (IOException e) {</span>
+<span class="nc" id="L517">            throw new UncheckedIOException(e);</span>
+        }
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

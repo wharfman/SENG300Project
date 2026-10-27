@@ -1,0 +1,114 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>JsonRoomRepository.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.persistence</a> &gt; <span class="el_source">JsonRoomRepository.java</span></div><h1>JsonRoomRepository.java</h1><pre class="source lang-java linenums">/*
+ * JsonRoomRepository.java
+ *
+ * Persistence-layer implementation of RoomRepository that loads the room catalogue
+ * from JSON using Jackson and checks catalogue-wide rules.
+ */
+package com.campusplan.persistence;
+
+import com.campusplan.domain.Room;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import java.io.IOException;
+import java.io.InputStream;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+
+/**
+ * Room catalogue read once from a UTF-8 JSON array of rooms.
+ *
+ * &lt;p&gt;Each room is validated by {@link Room} as it is read; this class additionally
+ * rejects catalogues with duplicate IDs or names. Any problem is reported as a
+ * {@link StorageException}.
+ */
+public class JsonRoomRepository implements RoomRepository {
+
+    /** Shared Jackson mapper; thread-safe once configured. */
+<span class="fc" id="L31">    private static final ObjectMapper MAPPER = new ObjectMapper();</span>
+
+    /** The loaded catalogue. */
+    private final List&lt;Room&gt; rooms;
+
+    /**
+     * Reads and validates a catalogue from a stream. The stream is not closed.
+     *
+     * @param json UTF-8 JSON array of room objects
+     * @throws StorageException if the JSON is unreadable, malformed, or breaks a room rule
+     */
+<span class="fc" id="L42">    public JsonRoomRepository(InputStream json) {</span>
+<span class="fc" id="L43">        this.rooms = read(json);</span>
+<span class="fc" id="L44">        checkUnique(rooms);</span>
+<span class="fc" id="L45">    }</span>
+
+    /**
+     * Loads the catalogue from a classpath resource such as {@code /seed/rooms.json}.
+     *
+     * @param resourcePath absolute classpath path of the JSON file
+     * @return a repository holding the loaded catalogue
+     * @throws StorageException if the resource is missing, unreadable, or invalid
+     */
+    public static JsonRoomRepository fromResource(String resourcePath) {
+<span class="fc" id="L55">        try (InputStream in = JsonRoomRepository.class.getResourceAsStream(resourcePath)) {</span>
+<span class="fc bfc" id="L56" title="All 2 branches covered.">            if (in == null) {</span>
+<span class="fc" id="L57">                throw new StorageException(&quot;Room catalogue not found: &quot; + resourcePath);</span>
+            }
+<span class="fc" id="L59">            return new JsonRoomRepository(in);</span>
+<span class="nc" id="L60">        } catch (IOException e) {</span>
+<span class="nc" id="L61">            throw new StorageException(&quot;Could not read room catalogue: &quot; + e.getMessage(), e);</span>
+        }
+    }
+
+    /** {@inheritDoc} */
+    @Override
+    public List&lt;Room&gt; findAll() {
+<span class="fc" id="L68">        return rooms;</span>
+    }
+
+    /**
+     * Parses the JSON into rooms.
+     *
+     * @param json UTF-8 JSON array of room objects
+     * @return an unmodifiable list of the parsed rooms
+     * @throws StorageException if the JSON cannot be read or parsed into valid rooms
+     */
+    private static List&lt;Room&gt; read(InputStream json) {
+        List&lt;Room&gt; rooms;
+        try {
+<span class="fc" id="L81">            rooms = MAPPER.readValue(json, new TypeReference&lt;List&lt;Room&gt;&gt;() { });</span>
+<span class="fc" id="L82">        } catch (JsonProcessingException e) {</span>
+            // Also covers a ValidationException thrown by the Room constructor during parsing.
+<span class="fc" id="L84">            throw new StorageException(&quot;Room catalogue is invalid: &quot; + e.getOriginalMessage(), e);</span>
+<span class="nc" id="L85">        } catch (IOException e) {</span>
+<span class="nc" id="L86">            throw new StorageException(&quot;Could not read room catalogue: &quot; + e.getMessage(), e);</span>
+<span class="fc" id="L87">        }</span>
+        // Jackson returns null for a JSON document that is just &quot;null&quot;.
+<span class="pc bpc" id="L89" title="1 of 2 branches missed.">        if (rooms == null) {</span>
+<span class="nc" id="L90">            throw new StorageException(&quot;Room catalogue is invalid: expected a JSON array of rooms.&quot;);</span>
+        }
+<span class="fc" id="L92">        return List.copyOf(rooms);</span>
+    }
+
+    /**
+     * Ensures no two rooms share an ID, or a name ignoring case. Also used by {@link JsonDataStore}.
+     *
+     * @param rooms the parsed catalogue
+     * @throws StorageException naming the first duplicate found
+     */
+    static void checkUnique(List&lt;Room&gt; rooms) {
+<span class="fc" id="L102">        Set&lt;String&gt; ids = new HashSet&lt;&gt;();</span>
+<span class="fc" id="L103">        Set&lt;String&gt; names = new HashSet&lt;&gt;();</span>
+<span class="fc bfc" id="L104" title="All 2 branches covered.">        for (Room room : rooms) {</span>
+<span class="fc bfc" id="L105" title="All 2 branches covered.">            if (!ids.add(room.id())) {</span>
+<span class="fc" id="L106">                throw new StorageException(&quot;Room catalogue is invalid: duplicate room ID &quot; + room.id() + &quot;.&quot;);</span>
+            }
+<span class="fc bfc" id="L108" title="All 2 branches covered.">            if (!names.add(room.name().toLowerCase(Locale.ROOT))) {</span>
+<span class="fc" id="L109">                throw new StorageException(&quot;Room catalogue is invalid: duplicate room name &quot; + room.name() + &quot;.&quot;);</span>
+            }
+<span class="fc" id="L111">        }</span>
+<span class="fc" id="L112">    }</span>
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

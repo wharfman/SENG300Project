@@ -19,6 +19,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
@@ -102,6 +103,33 @@ class EventServiceTest {
 
         assertThrows(ValidationException.class, () -> service.edit(event.id(), details("Meeting", "S001", "S999")));
         assertEquals(event, service.get(event.id()));
+    }
+
+    @Test
+    @DisplayName("Given a draft for 3 with minimum 3, when an invitee is removed, then it is rejected because the minimum no longer fits, and the draft is unchanged")
+    void rejectsEditBelowMinimumAttendance() {
+        Event event = service.create(new EventDetails("Meeting", List.of("S001", "S002", "S003"),
+                DAY, DAY, 60, Set.of(), 3));
+
+        assertThrows(ValidationException.class, () -> service.edit(event.id(), new EventDetails("Meeting",
+                List.of("S001", "S002"), DAY, DAY, 60, Set.of(), 3)));
+        assertEquals(event, service.get(event.id()));
+    }
+
+    @Test
+    @DisplayName("Given a draft for 20, when a 21st invitee is added, then it is rejected and the draft is unchanged")
+    void rejectsEditTo21Invitees() {
+        StudentService students = new StudentService(new InMemoryStudentRepository());
+        List<String> ids = new ArrayList<>();
+        for (int i = 1; i <= 21; i++) {
+            ids.add(students.create("Student " + i, "s" + i + "@example.com").id());
+        }
+        EventService big = new EventService(new InMemoryEventRepository(), students);
+        Event event = big.create(new EventDetails("Assembly", ids.subList(0, 20), DAY, DAY, 60, Set.of(), 2));
+
+        assertThrows(ValidationException.class,
+                () -> big.edit(event.id(), new EventDetails("Assembly", ids, DAY, DAY, 60, Set.of(), 2)));
+        assertEquals(event, big.get(event.id()));
     }
 
     @Test

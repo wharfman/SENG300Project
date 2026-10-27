@@ -1,0 +1,185 @@
+requirement_id,acceptance_scenario,issue,implementation_link,test_id,test_type,release,status
+FR-01,"UC-02 main flow: add student; name trimmed, email trimmed and lowercased",,src/main/java/com/campusplan/domain/Student.java,StudentTest#normalizesNameAndEmail,unit,P1,Pass
+FR-01,UC-02 main flow: add student; next ID assigned,,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#generatesSequentialIds,unit,P1,Pass
+FR-01,UC-02 main flow: add student; prints Created message,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#addStudent,acceptance,P1,Pass
+FR-01,UC-02 3a: name 1-100 characters after trimming (boundaries 1 and 100 accepted),,src/main/java/com/campusplan/domain/Student.java,StudentTest#acceptsBoundaryNameLength,unit,P1,Pass
+FR-01,UC-02 3a: name length measured after trimming,,src/main/java/com/campusplan/domain/Student.java,StudentTest#lengthIsMeasuredAfterTrimming,unit,P1,Pass
+FR-01,UC-02 3a: name empty after trimming rejected,,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsBlankName,unit,P1,Pass
+FR-01,UC-02 3a: 101-character name rejected,,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsTooLongName,unit,P1,Pass
+FR-01,UC-02 3b: malformed email rejected,,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsMalformedEmail,unit,P1,Pass
+FR-01,UC-02 3b: well-formed email accepted,,src/main/java/com/campusplan/domain/Student.java,StudentTest#acceptsWellFormedEmail,unit,P1,Pass
+FR-01,"UC-02 3a/3b: invalid add rejected, nothing saved, no ID used up",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsInvalidCreate,unit,P1,Pass
+FR-01,UC-02 3a/3b: invalid name and email show Error messages,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#addStudentWithInvalidFields,acceptance,P1,Pass
+FR-01,UC-02: blank student ID rejected,,src/main/java/com/campusplan/domain/Student.java,StudentTest#rejectsBlankId,unit,P1,Pass
+FR-01,UC-02 4a: duplicate email (different case and padding) rejected on add,,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsDuplicateEmailOnCreate,unit,P1,Pass
+FR-01,UC-02 4a: duplicate email on add shows Error message,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#addStudentWithDuplicateEmail,acceptance,P1,Pass
+FR-01,"UC-02 A1: search by partial name or email, ignoring case",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#searchesByPartialNameOrEmail,unit,P1,Pass
+FR-01,UC-02 A1: blank search lists everyone; padding ignored,,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#searchTrimsQuery,unit,P1,Pass
+FR-01,UC-02 A1/A1a: search lists matches; no matches prints No students found.,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#searchStudents,acceptance,P1,Pass
+FR-01,"UC-02 A2: view student by ID, extra spaces ignored",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#getTrimsId,unit,P1,Pass
+FR-01,UC-02 A2a/A3b: unknown ID rejected on view and edit,,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsUnknownId,unit,P1,Pass
+FR-01,UC-02 A2a/A3b: unknown ID shows Error before edit fields are asked,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#unknownStudentId,acceptance,P1,Pass
+FR-01,UC-02 A3: edit keeps ID and stores new values,,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#editKeepsId,unit,P1,Pass
+FR-01,UC-02 A3: blank answer keeps current value; view shows update,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#editStudentKeepingBlankFields,acceptance,P1,Pass
+FR-01,"UC-02 A3: invalid name or email on edit rejected, student unchanged",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsInvalidEdit,unit,P1,Pass
+FR-01,"UC-02 A3: edit to another student's email rejected, student unchanged",,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#rejectsDuplicateEmailOnEdit,unit,P1,Pass
+FR-01,"UC-02 A3: edit to another student's email shows Error, student unchanged",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#editStudentToDuplicateEmail,acceptance,P1,Pass
+FR-01,UC-02 A3a: changing only the capitalization of own email is accepted,,src/main/java/com/campusplan/application/StudentService.java,StudentServiceTest#editMayKeepOwnEmail,unit,P1,Pass
+FR-01,UC-03 main flow: filter by minimum capacity,,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#filtersByCapacity,unit,P1,Pass
+FR-01,UC-03 main flow: filter by required features,,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#filtersByFeatures,unit,P1,Pass
+FR-01,"UC-03 main flow: capacity 6 + whiteboard on seed catalogue gives R01, R02, R04, R06 sorted by ID",,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#filtersSeedByCapacityAndFeature,integration,P1,Pass
+FR-01,UC-03 main flow: filter requiring all features on seed catalogue,,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#filtersSeedByAllFeatures,integration,P1,Pass
+FR-01,UC-03 main flow/3b: filter via CLI with lowercase feature name,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRooms,acceptance,P1,Pass
+FR-01,UC-03 1a: list rooms sorted by ID,,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#listsAllById,unit,P1,Pass
+FR-01,UC-03 1a: list every seed room in ID order,,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#listsSeedCatalogue,integration,P1,Pass
+FR-01,UC-03 1a: list rooms via CLI shows capacity and features,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#listRooms,acceptance,P1,Pass
+FR-01,UC-03 1a: rooms with no features show a dash,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#listRoomsShowsDashForNoFeatures,acceptance,P1,Pass
+FR-01,UC-03 2a/3a: blank capacity and blank features list every room,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithBlankCapacity,acceptance,P1,Pass
+FR-01,UC-03 3a: blank features require no features,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithNoMatch,acceptance,P1,Pass
+FR-01,"UC-03 3b: features with extra spaces, mixed case or repeated treated as one requirement",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithMessyFeatures,acceptance,P1,Pass
+FR-01,UC-03 4a: no rooms match,,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#filterWithNoMatch,unit,P1,Pass
+FR-01,UC-03 4a: filtering above the largest seed room returns nothing,,src/main/java/com/campusplan/application/RoomService.java,RoomCatalogueIntegrationTest#filtersSeedAboveLargestRoom,integration,P1,Pass
+FR-01,UC-03 4a: no match prints No rooms match.,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithNoMatch,acceptance,P1,Pass
+FR-01,UC-03 2c: minimum capacity below 1 rejected,,src/main/java/com/campusplan/application/RoomService.java,RoomServiceTest#rejectsInvalidCapacity,unit,P1,Pass
+FR-01,"UC-03 2b/2c/3c: non-numeric capacity, capacity 0, unknown feature show Error messages",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#filterRoomsWithInvalidInput,acceptance,P1,Pass
+FR-01,UC-03: room has features only when it has every required one,,src/main/java/com/campusplan/domain/Room.java,RoomTest#hasFeaturesChecksSubset,unit,P1,Pass
+FR-01,AC-02.22/AC-02.23: unknown option 99 reported; end of input quits,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#unknownOptionAndEndOfInput,acceptance,P1,Pass
+FR-03,AC-01.1 (UC-01 catalogue load): seed catalogue loads with varied capacities and every feature,,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#loadsSeedCatalogue,integration,P1,Pass
+FR-03,AC-01.1 (UC-01 catalogue load): room fields read from JSON,,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#readsFields,integration,P1,Pass
+FR-03,AC-01.5 (UC-01 catalogue load): room capacity 1 and 100 accepted,,src/main/java/com/campusplan/domain/Room.java,RoomTest#acceptsBoundaryCapacity,unit,P1,Pass
+FR-03,"AC-01.6 (UC-01 catalogue load): room name of 1 and 60 characters accepted, trimmed",,src/main/java/com/campusplan/domain/Room.java,RoomTest#acceptsBoundaryNameLength,unit,P1,Pass
+FR-03,AC-01.7 (UC-01 catalogue load): room with no feature list has no features,,src/main/java/com/campusplan/domain/Room.java,RoomTest#nullFeaturesMeansNone,unit,P1,Pass
+FR-03,AC-01.2 (UC-01 catalogue load): missing catalogue raises storage error,,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsMissingResource,integration,P1,Pass
+FR-03,"AC-01.5 (UC-01 catalogue load): room capacity -1, 0, 101 rejected",,src/main/java/com/campusplan/domain/Room.java,RoomTest#rejectsCapacityOutOfRange,unit,P1,Pass
+FR-03,AC-01.6 (UC-01 catalogue load): room name blank or over 60 characters rejected,,src/main/java/com/campusplan/domain/Room.java,RoomTest#rejectsInvalidName,unit,P1,Pass
+FR-03,AC-01.3 (UC-01 catalogue load): blank room ID rejected,,src/main/java/com/campusplan/domain/Room.java,RoomTest#rejectsBlankId,unit,P1,Pass
+FR-03,"AC-01.5, AC-01.7 (UC-01 catalogue load): invalid capacity or unknown feature in JSON rejected",,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsInvalidRoom,integration,P1,Pass
+FR-03,AC-01.8 (UC-01 catalogue load): malformed or empty JSON rejected,,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsCorruptJson,integration,P1,Pass
+FR-03,AC-01.3 (UC-01 catalogue load): duplicate room ID rejected,,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsDuplicateId,integration,P1,Pass
+FR-03,AC-01.4 (UC-01 catalogue load): duplicate room name ignoring case rejected,,src/main/java/com/campusplan/persistence/JsonRoomRepository.java,JsonRoomRepositoryTest#rejectsDuplicateNameIgnoringCase,integration,P1,Pass
+FR-01,Regression: piped input starting with a UTF-8 byte-order mark is read as the first menu choice,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliAcceptanceTest#ignoresByteOrderMark,acceptance,P1,Pass
+FR-02,AC-04.1: adding a valid interval saves it and shows the student's availability for that date,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#showsAvailabilityForDateAndGroupedOnView,acceptance,P1,Pass
+FR-02,AC-04.1: added interval is stored and returned merged,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#addMergesAndStores,unit,P1,Pass
+FR-02,AC-04.2: overlapping intervals on the same date merge (09:00-11:00 + 10:00-12:00 = 09:00-12:00),,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#mergesOverlappingIntervals,unit,P1,Pass
+FR-02,AC-04.3: touching intervals merge (13:00-14:00 + 14:00-15:00 = 13:00-15:00),,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#mergesAdjacentIntervals,unit,P1,Pass
+FR-02,AC-04.3: adjacent intervals entered in the CLI are shown merged,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#addAndRemoveAvailability,acceptance,P1,Pass
+FR-02,AC-04.4/AC-04.5: intervals with a gap or on different dates stay separate and sorted,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#keepsSeparateIntervalsSorted,unit,P1,Pass
+FR-02,AC-04.5: same times on different dates neither overlap nor touch,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#differentDatesNeverOverlap,unit,P1,Pass
+FR-02,AC-04.6: adding time already covered changes nothing,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#containedIntervalIsAbsorbed,unit,P1,Pass
+FR-02,AC-04.6: adding 13:30-14:00 inside 13:00-17:00 prints Nothing changed,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#addingCoveredTimeChangesNothing,acceptance,P1,Pass
+FR-02,AC-04.7: removing 10:00-11:00 from 09:00-12:00 splits it,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#removalSplitsInterval,unit,P1,Pass
+FR-02,AC-04.7: removing the start of an interval trims it,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#removalTrimsInterval,unit,P1,Pass
+FR-02,AC-04.7: removal is stored,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#removeUpdatesStoredAvailability,unit,P1,Pass
+FR-02,AC-04.8: removing time the student does not have is rejected,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#rejectsRemovingTimeThatIsNotAvailable,unit,P1,Pass
+FR-02,AC-04.8: rejected removal leaves availability unchanged,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#rejectsRemovingUnavailableTimeWithoutChange,unit,P1,Pass
+FR-02,"AC-04.9: times off a 30-minute boundary (09:15, 10:45, 09:01, 09:59) rejected",,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#rejectsOffBoundaryTimes,unit,P1,Pass
+FR-02,AC-04.9: times with seconds rejected,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#rejectsSeconds,unit,P1,Pass
+FR-02,"AC-04.10: start not before end (10:00-10:00, 11:00-10:00) rejected",,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#rejectsStartNotBeforeEnd,unit,P1,Pass
+FR-02,AC-04.11: intervals before 08:00 or after 22:00 rejected,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#rejectsOutsideOpeningHours,unit,P1,Pass
+FR-02,AC-04.12: exactly 08:00-22:00 accepted,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#acceptsFullOpeningHours,unit,P1,Pass
+FR-02,AC-04.12: shortest 30-minute interval accepted,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#acceptsShortestInterval,unit,P1,Pass
+FR-02,AC-04.9 to AC-04.14: each invalid entry prints its Error line and nothing is stored,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsInvalidAvailability,acceptance,P1,Pass
+FR-02,AC-04.13: missing date or time rejected,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#rejectsMissingFields,unit,P1,Pass
+FR-02,"AC-04.14: unknown student rejected on add, remove and view",,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#rejectsUnknownStudent,unit,P1,Pass
+FR-02,AC-04.15: viewing a student shows availability grouped by date,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#showsAvailabilityForDateAndGroupedOnView,acceptance,P1,Pass
+FR-02,Brief section 2: invalid interval rejected and existing availability unchanged,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#rejectsInvalidIntervalWithoutChange,unit,P1,Pass
+FR-02,Brief section 2: missing availability means unavailable,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#missingAvailabilityMeansUnavailable,unit,P1,Pass
+FR-02,Brief section 2: new student has no availability,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#newStudentHasNoAvailability,unit,P1,Pass
+FR-02,Brief section 2: half-open intervals; 13:00-14:00 and 14:00-15:00 do not overlap,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#adjacentIntervalsDoNotOverlap,unit,P1,Pass
+FR-02,Brief section 2: intervals sharing 30 minutes overlap,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#sharedSlotOverlaps,unit,P1,Pass
+FR-02,Brief section 2: available only when one interval covers the complete event,,src/main/java/com/campusplan/domain/AvailabilityInterval.java,AvailabilityIntervalTest#coversOnlyCompleteIntervals,unit,P1,Pass
+FR-02,Brief section 2: available only when one interval covers the complete event,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#availableOnlyForFullyCoveredEvent,unit,P1,Pass
+FR-02,Brief section 2: event across a merged join is covered,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#eventAcrossMergedJoinIsCovered,unit,P1,Pass
+FR-02,Brief section 2: service checks full coverage,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#isAvailableRequiresFullCoverage,unit,P1,Pass
+FR-02,UC-04: padded student ID accepted,,src/main/java/com/campusplan/application/AvailabilityService.java,AvailabilityServiceTest#trimsStudentId,unit,P1,Pass
+FR-02,UC-04: blank student ID rejected,,src/main/java/com/campusplan/domain/Availability.java,AvailabilityTest#rejectsBlankStudentId,unit,P1,Pass
+FR-02,"AC-05.1/AC-05.2: drafts get sequential IDs, DRAFT status and PENDING responses",,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#createsDrafts,unit,P1,Pass
+FR-02,AC-05.2: new draft is DRAFT with every invitee PENDING and no room or time,,src/main/java/com/campusplan/domain/Event.java,EventTest#newDraftIsPending,unit,P1,Pass
+FR-02,AC-05.3: 6 invitees needing a whiteboard reports 4 fitting rooms,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#reportsFittingRooms,acceptance,P1,Pass
+FR-02,AC-05.4: 20 invitees needing WHITEBOARD and ACCESSIBLE is created with a warning,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#warnsWhenNoRoomFits,acceptance,P1,Pass
+FR-02,AC-05.5: no required features accepted,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#nullFeaturesMeansNone,unit,P1,Pass
+FR-02,AC-05.6/AC-05.11: windows of 1 and 7 days accepted,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#acceptsBoundaryWindow,unit,P1,Pass
+FR-02,AC-05.7: title of 1 or 100 characters accepted,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#acceptsBoundaryTitleLength,unit,P1,Pass
+FR-02,AC-05.7: blank title rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsBlankTitle,unit,P1,Pass
+FR-02,AC-05.7: 101-character title rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsTooLongTitle,unit,P1,Pass
+FR-02,AC-05: title and invitee IDs trimmed; window days counted,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#normalizesFields,unit,P1,Pass
+FR-02,AC-05.8: 2 or 20 invitees accepted,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#acceptsBoundaryInviteeCount,unit,P1,Pass
+FR-02,"AC-05.8: 0, 1 or 21 invitees rejected",,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsInviteeCountOutOfRange,unit,P1,Pass
+FR-02,AC-05.9: invitee listed twice rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsDuplicateInvitees,unit,P1,Pass
+FR-02,AC-05.8: blank or missing invitee list rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsBlankInvitee,unit,P1,Pass
+FR-02,"AC-05.10/AC-05.15: unknown invitee rejected, nothing saved, no ID used up",,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#rejectsUnknownInvitee,unit,P1,Pass
+FR-02,AC-05.8 to AC-05.14: each invalid draft prints its Error line and no event is created,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsInvalidDrafts,acceptance,P1,Pass
+FR-02,AC-05.11: 8-day window rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsWindowOverSevenDays,unit,P1,Pass
+FR-02,AC-05.12: last day before first day rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsWindowEndingBeforeItStarts,unit,P1,Pass
+FR-02,AC-05.12: missing first or last day rejected,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsMissingWindow,unit,P1,Pass
+FR-02,"AC-05.13: 30, 90 and 180 minutes accepted",,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#acceptsValidDuration,unit,P1,Pass
+FR-02,"AC-05.13: -30, 0, 15, 45, 179 and 210 minutes rejected",,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsInvalidDuration,unit,P1,Pass
+FR-02,AC-05.14: minimum 2 or 6 of 6 accepted,,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#acceptsBoundaryMinimumAttendance,unit,P1,Pass
+FR-02,"AC-05.14: minimum 0, 1 or 7 of 6 rejected",,src/main/java/com/campusplan/domain/EventDetails.java,EventDetailsTest#rejectsMinimumAttendanceOutOfRange,unit,P1,Pass
+FR-02,AC-05: responses must match invitees exactly,,src/main/java/com/campusplan/domain/Event.java,EventTest#rejectsResponsesNotMatchingInvitees,unit,P1,Pass
+FR-02,AC-05: blank ID or missing details or status rejected,,src/main/java/com/campusplan/domain/Event.java,EventTest#rejectsMissingFields,unit,P1,Pass
+FR-02,AC-06.1: events listed by first day then ID,,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#listsByFirstDayThenId,unit,P1,Pass
+FR-02,"AC-06.1: CLI list shows ID, status, window, title and invitee count in order",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#listsEventsSortedWithInviteeCount,acceptance,P1,Pass
+FR-02,AC-06.2/AC-06.3: blank answers keep values; view shows every field and invitee,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#editDraftKeepingBlankFields,acceptance,P1,Pass
+FR-02,"AC-06.4/AC-06.5: kept invitees keep responses, new ones PENDING, removed ones dropped",,src/main/java/com/campusplan/domain/Event.java,EventTest#editingDraftKeepsExistingResponses,unit,P1,Pass
+FR-02,AC-06.4/AC-06.10: editing keeps ID and DRAFT status,,src/main/java/com/campusplan/domain/Event.java,EventTest#editingDraftKeepsIdentity,unit,P1,Pass
+FR-02,"AC-06.6: removing invitees below the minimum rejected, draft unchanged",,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#rejectsEditBelowMinimumAttendance,unit,P1,Pass
+FR-02,"AC-06.7: adding a 21st invitee rejected, draft unchanged",,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#rejectsEditTo21Invitees,unit,P1,Pass
+FR-02,AC-06.8: editing a non-DRAFT event rejected with Only DRAFT events can be edited,,src/main/java/com/campusplan/domain/Event.java,EventTest#onlyDraftsCanBeEdited,unit,P1,Pass
+FR-02,AC-06.9: unknown event ID rejected on view and edit,,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#rejectsUnknownEvent,unit,P1,Pass
+FR-02,AC-06.9: unknown event ID shows Error and no edit prompts,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#unknownEvent,acceptance,P1,Pass
+FR-02,AC-06.10: accepted edit stores new details with same ID,,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#editsDraft,unit,P1,Pass
+FR-02,"AC-06.11: edit inviting an unknown student rejected, draft unchanged",,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#rejectsEditWithUnknownInvitee,unit,P1,Pass
+FR-02,"AC-06.11: edit with duration 200 rejected, draft unchanged",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectedEditLeavesDraftUnchanged,acceptance,P1,Pass
+FR-02,AC-06.2: padded event ID found,,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#getTrimsId,unit,P1,Pass
+FR-03,AC-01.9: first start offers both samples or an empty start; first sample loads and is saved,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#loadsSampleDataOnFirstStart,acceptance,P1,Pass
+FR-03,AC-01.9: second sample can be chosen,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#loadsSecondSample,acceptance,P1,Pass
+FR-03,AC-01.9/AC-01.10: empty start creates no data file,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#declinesSampleData,acceptance,P1,Pass
+FR-03,AC-01.10: missing file starts empty with catalogue rooms and writes nothing,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#missingFileStartsEmpty,integration,P1,Pass
+FR-03,"AC-01.11: sample has >=12 students, >=6 varied rooms, 7 days of availability, >=3 events",,sample-data/campusplan-sample.json,SampleDataTest#sampleMeetsSizeRequirements,integration,P1,Pass
+FR-03,AC-01.12: schedulable sample loads and E001 has 5 of 6 eligible (minimum 4),,sample-data/campusplan-sample.json,SampleDataTest#sampleHasValidSuggestion,integration,P1,Pass
+FR-03,AC-01.12: no-suggestion sample loads and E001 cannot reach minimum 6,,sample-data/campusplan-no-suggestion.json,SampleDataTest#noSuggestionFileHasNone,integration,P1,Pass
+FR-03,AC-01.12: bundled seeds are identical to sample-data files,,src/main/java/com/campusplan/Main.java,SampleDataTest#bundledSeedsMatchSamples,integration,P1,Pass
+FR-03,AC-01.13: cut-off file error names line and column,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#corruptFileErrorNamesLineAndColumn,integration,P1,Pass
+FR-03,"AC-01.13/AC-01.14: malformed, empty, null or array file rejected, file unchanged",,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsCorruptFileWithoutChangingIt,integration,P1,Pass
+FR-03,AC-01.14: corrupt file at startup is not overwritten,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#corruptFileIsNotOverwritten,acceptance,P1,Pass
+FR-03,AC-01.14: quit is the default after a corrupt-file error,,src/main/java/com/campusplan/ui/CorruptDataPrompt.java,CorruptDataPromptTest#quitIsTheDefault,acceptance,P1,Pass
+FR-03,AC-01.15: setting the file aside needs YES,,src/main/java/com/campusplan/ui/CorruptDataPrompt.java,CorruptDataPromptTest#settingAsideNeedsYes,acceptance,P1,Pass
+FR-03,AC-01.15: set-aside file keeps identical contents under a new name and store opens empty,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#setAsideKeepsCorruptFile,integration,P1,Pass
+FR-03,AC-01.16: availability or event referring to an unknown student rejected,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsDanglingReferences,integration,P1,Pass
+FR-03,AC-01.16 (UC-01 3d): invalid student record rejected,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsInvalidRecord,integration,P1,Pass
+FR-03,AC-01.16 (UC-01 3d): duplicate student IDs or emails rejected,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsDuplicateStudents,integration,P1,Pass
+FR-03,AC-01.16 (UC-01 3d): invalid date rejected,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsBadDateOrTime,integration,P1,Pass
+FR-03,AC-01.17: unknown format version refused,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsUnknownFormatVersion,integration,P1,Pass
+FR-03,AC-01.18: overlapping or touching saved intervals load merged,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#mergesSavedAvailabilityOnLoad,integration,P1,Pass
+FR-03,UC-01 3a: seed data only loads into an empty store; corrupt seed rejected,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#loadsSeedOnlyIntoEmptyStore,integration,P1,Pass
+FR-03,UC-01 3a: corrupt seed rejected and store stays empty,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#rejectsCorruptSeed,integration,P1,Pass
+FR-03,"AC-07.1/AC-07.4: students, availability and events reload identical with same IDs",,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#roundTripsAllData,integration,P1,Pass
+FR-03,"AC-07.1/AC-07.8: demo slice (add, duplicate rejected, availability, room filter, draft) survives restart",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#demoSliceSurvivesRestart,acceptance,P1,Pass
+FR-03,AC-07.2: next ID after restart follows the saved ones,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#preservesIdSequenceAfterRestart,integration,P1,Pass
+FR-03,AC-07.3: Zoë Ñúñez 李 saved as UTF-8 and reloaded unchanged,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#savesUtf8,integration,P1,Pass
+FR-03,AC-07.5: leftover temporary file from an interrupted save is ignored,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#interruptedSaveLoadsLastCompleteSave,integration,P1,Pass
+FR-03,"AC-07.6: failed save shows error, change not applied, previous file untouched",,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#failedSaveKeepsPreviousFile,integration,P1,Pass
+FR-03,AC-07.7: saving an unchanged record does not rewrite the file,,src/main/java/com/campusplan/persistence/JsonDataStore.java,JsonDataStoreTest#unchangedSaveDoesNotWrite,integration,P1,Pass
+FR-04,"Generate and explain the top five suggestions (brief section 3 ranking, boundaries, no-result case)",,,,planned,P2,Planned
+FR-05,Confirm a suggestion with revalidation; cancel scheduled events with confirmation,,,,planned,P2,Planned
+FR-06,"Record PENDING, ACCEPTED and DECLINED responses with conflict and availability rules",,,,planned,P2,Planned
+FR-07,List events by date and status; export roster CSV,,,,planned,P2,Planned
+FR-08,Undo and redo at least 20 operations,,,,planned,P2,Planned
+FR-09,"CR-01 room closures, affected events, P2 file migration",,,,planned,P3,Planned
+FR-10,"CR-02 replacement plan preview, confirmation and undo",,,,planned,P3,Planned
+FR-11,"Integrated release, user guide, repeatable build, documented limitations",,,,planned,P3,Planned
+NFR-01,Rejected input changes nothing (every rejection case),,,StudentServiceTest#rejectsInvalidCreate; AvailabilityServiceTest#rejectsInvalidIntervalWithoutChange; EventServiceTest#rejectsUnknownInvitee; EventServiceTest#rejectsEditBelowMinimumAttendance,unit,P1,Pass
+NFR-02,Bad catalogue or data file never loads and stays byte-for-byte unchanged,,,JsonDataStoreTest#rejectsCorruptFileWithoutChangingIt; CampusPlanCliPlanningAcceptanceTest#corruptFileIsNotOverwritten; JsonRoomRepositoryTest#rejectsCorruptJson,integration,P1,Pass
+NFR-03,Confirmed work survives a crash: last complete save loads (automated); 20-kill manual test,,,JsonDataStoreTest#interruptedSaveLoadsLastCompleteSave,integration,P1,Partial: manual kill test planned for P2
+NFR-04,First-time users complete UAT tasks unaided,,,,manual,P2,Planned
+NFR-05,Error messages: one Error: line of 120 characters or fewer,,,,planned,P2,Planned
+NFR-06,"CLI never crashes on 1,000 random inputs",,,,planned,P2,Planned
+NFR-07,"Responsive with 200 students, 2,000 intervals and 100 events",,,,planned,P2,Planned
+NFR-08,"Builds and runs offline on Windows, macOS and Linux with Java 21",,,,manual,P1,Partial: verified on Windows 11 with JDK 21
+NFR-09,UTF-8 JSON with a format version; newer versions refused,,,JsonDataStoreTest#savesUtf8; JsonDataStoreTest#rejectsUnknownFormatVersion,integration,P1,Pass
+NFR-10,Same input gives the same output in 10 of 10 runs,,,,planned,P2,Planned
+NFR-11,Layered packages; domain has no I/O; storage only through repository interfaces; Javadoc on public API,,,,review,P1,Pass (code review)
+NFR-12,Every AC has a test; >=80% line coverage on domain and application,,,docs/test-report/coverage/index.html,coverage,P1,"Pass: domain 98.2%, application 96.8% lines"
+NFR-13,One-command build from a fresh clone with only JDK 21,,,,manual,P1,Planned: fresh-clone check before tagging p1
+NFR-14,No network use; fictional sample data only,,,,review,P1,Pass (no java.net imports; sample data uses .example domains)

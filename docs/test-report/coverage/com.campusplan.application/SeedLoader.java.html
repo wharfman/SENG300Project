@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>SeedLoader.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.application</a> &gt; <span class="el_source">SeedLoader.java</span></div><h1>SeedLoader.java</h1><pre class="source lang-java linenums">/*
+ * SeedLoader.java
+ *
+ * Application-layer abstraction for loading sample data into an empty application,
+ * so the user interface can offer it without knowing how data is stored.
+ */
+package com.campusplan.application;
+
+import java.util.List;
+
+/** Loads one of the documented sample datasets. Seed loading only happens into an empty application. */
+public interface SeedLoader {
+
+    /** A loader that never offers seed data, for sessions that start with data or in tests. */
+<span class="fc" id="L15">    SeedLoader NONE = new SeedLoader() {</span>
+        @Override
+        public boolean canLoad() {
+<span class="fc" id="L18">            return false;</span>
+        }
+
+        @Override
+        public List&lt;String&gt; datasets() {
+<span class="nc" id="L23">            return List.of();</span>
+        }
+
+        @Override
+        public void load(String dataset) {
+<span class="nc" id="L28">            throw new IllegalStateException(&quot;No seed data is available.&quot;);</span>
+        }
+    };
+
+    /**
+     * Whether seed data can be loaded now.
+     *
+     * @return true if the application is empty and at least one dataset is available
+     */
+    boolean canLoad();
+
+    /**
+     * Describes the datasets that can be loaded, in the order they should be offered.
+     *
+     * @return one operator-facing description per dataset
+     */
+    List&lt;String&gt; datasets();
+
+    /**
+     * Loads a dataset and saves it.
+     *
+     * @param dataset one of the descriptions returned by {@link #datasets()}
+     * @throws com.campusplan.domain.ValidationException     if the application is not empty
+     * @throws com.campusplan.persistence.StorageException if the data is corrupt or cannot be saved
+     */
+    void load(String dataset);
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

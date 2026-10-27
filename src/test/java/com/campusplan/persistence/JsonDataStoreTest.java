@@ -9,6 +9,8 @@ package com.campusplan.persistence;
 import com.campusplan.application.AvailabilityService;
 import com.campusplan.application.EventService;
 import com.campusplan.application.StudentService;
+import com.campusplan.domain.Availability;
+import com.campusplan.domain.AvailabilityInterval;
 import com.campusplan.domain.Event;
 import com.campusplan.domain.EventDetails;
 import com.campusplan.domain.Room;
@@ -110,12 +112,29 @@ class JsonDataStoreTest {
     }
 
     @Test
-    @DisplayName("Given a name with non-ASCII characters, when saved, then the file is UTF-8 and the name reloads unchanged")
+    @DisplayName("Given a name with accented and non-Latin characters, when saved, then the file is UTF-8 and the name reloads unchanged")
     void savesUtf8() throws IOException {
-        new StudentService(JsonDataStore.open(file(), CATALOGUE).students()).create("Zoë Ångström", "zoe@example.com");
+        new StudentService(JsonDataStore.open(file(), CATALOGUE).students()).create("Zoë Ñúñez 李", "zoe@example.com");
 
-        assertTrue(Files.readString(file(), StandardCharsets.UTF_8).contains("Zoë Ångström"));
-        assertEquals("Zoë Ångström", JsonDataStore.open(file(), CATALOGUE).students().findAll().get(0).name());
+        assertTrue(Files.readString(file(), StandardCharsets.UTF_8).contains("Zoë Ñúñez 李"));
+        assertEquals("Zoë Ñúñez 李", JsonDataStore.open(file(), CATALOGUE).students().findAll().get(0).name());
+    }
+
+    @Test
+    @DisplayName("Given saved availability that overlaps or touches, when the store is opened, then each date shows one merged interval")
+    void mergesSavedAvailabilityOnLoad() throws IOException {
+        writeFile("""
+                {"formatVersion":1,"rooms":[],"events":[],
+                 "students":[{"id":"S001","name":"Ada","email":"ada@example.com"}],
+                 "availability":[{"studentId":"S001","intervals":[
+                     {"date":"2026-11-02","start":"13:00","end":"15:00"},
+                     {"date":"2026-11-02","start":"14:00","end":"16:00"},
+                     {"date":"2026-11-02","start":"16:00","end":"17:00"}]}]}""");
+
+        Availability loaded = JsonDataStore.open(file(), CATALOGUE).availability().findByStudentId("S001").orElseThrow();
+
+        assertEquals(List.of(new AvailabilityInterval(DAY, LocalTime.of(13, 0), LocalTime.of(17, 0))),
+                loaded.intervals());
     }
 
     @Test

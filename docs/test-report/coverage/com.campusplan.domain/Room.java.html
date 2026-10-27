@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?><!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd"><html xmlns="http://www.w3.org/1999/xhtml" lang="en"><head><meta http-equiv="Content-Type" content="text/html;charset=UTF-8"/><link rel="stylesheet" href="../jacoco-resources/report.css" type="text/css"/><link rel="shortcut icon" href="../jacoco-resources/report.gif" type="image/gif"/><title>Room.java</title><link rel="stylesheet" href="../jacoco-resources/prettify.css" type="text/css"/><script type="text/javascript" src="../jacoco-resources/prettify.js"></script></head><body onload="window['PR_TAB_WIDTH']=4;prettyPrint()"><div class="breadcrumb" id="breadcrumb"><span class="info"><a href="../jacoco-sessions.html" class="el_session">Sessions</a></span><a href="../index.html" class="el_report">CampusPlan</a> &gt; <a href="index.source.html" class="el_package">com.campusplan.domain</a> &gt; <span class="el_source">Room.java</span></div><h1>Room.java</h1><pre class="source lang-java linenums">/*
+ * Room.java
+ *
+ * Domain model for a room in the campus room catalogue, including the
+ * validation rules for room names and capacities.
+ */
+package com.campusplan.domain;
+
+import java.util.Collections;
+import java.util.EnumSet;
+import java.util.Set;
+
+/**
+ * A bookable room. The name is stored trimmed; a null feature set means no features.
+ *
+ * &lt;p&gt;Instances are immutable, including the feature set.
+ *
+ * @param id       catalogue identifier, never blank
+ * @param name     display name, 1-60 characters after trimming
+ * @param capacity number of seats, 1-100
+ * @param features features the room provides, possibly empty
+ */
+public record Room(String id, String name, int capacity, Set&lt;RoomFeature&gt; features) {
+
+    /** Maximum length of a room name, measured after trimming. */
+    public static final int MAX_NAME_LENGTH = 60;
+
+    /** Largest allowed room capacity. */
+    public static final int MAX_CAPACITY = 100;
+
+    /**
+     * Validates and normalizes every field.
+     *
+     * @throws ValidationException if the ID is blank, the name is invalid, or the capacity is out of range
+     */
+<span class="fc" id="L36">    public Room {</span>
+<span class="fc bfc" id="L37" title="All 4 branches covered.">        if (id == null || id.isBlank()) {</span>
+<span class="fc" id="L38">            throw new ValidationException(&quot;Room ID is required.&quot;);</span>
+        }
+<span class="fc bfc" id="L40" title="All 2 branches covered.">        name = name == null ? &quot;&quot; : name.trim();</span>
+<span class="fc bfc" id="L41" title="All 4 branches covered.">        if (name.isEmpty() || name.length() &gt; MAX_NAME_LENGTH) {</span>
+<span class="fc" id="L42">            throw new ValidationException(</span>
+                    &quot;Room name must be 1-&quot; + MAX_NAME_LENGTH + &quot; characters after trimming.&quot;);
+        }
+<span class="fc bfc" id="L45" title="All 4 branches covered.">        if (capacity &lt; 1 || capacity &gt; MAX_CAPACITY) {</span>
+<span class="fc" id="L46">            throw new ValidationException(&quot;Room capacity must be 1-&quot; + MAX_CAPACITY + &quot;.&quot;);</span>
+        }
+        // EnumSet keeps features in declaration order for display; EnumSet.copyOf cannot copy an empty
+        // non-EnumSet collection, hence the separate empty case.
+<span class="fc bfc" id="L50" title="All 4 branches covered.">        features = features == null || features.isEmpty()</span>
+<span class="fc" id="L51">                ? Collections.unmodifiableSet(EnumSet.noneOf(RoomFeature.class))</span>
+<span class="fc" id="L52">                : Collections.unmodifiableSet(EnumSet.copyOf(features));</span>
+<span class="fc" id="L53">    }</span>
+
+    /**
+     * Checks whether this room provides every required feature.
+     *
+     * @param required features that must all be present; an empty set always matches
+     * @return true if the room has all of {@code required}
+     */
+    public boolean hasFeatures(Set&lt;RoomFeature&gt; required) {
+<span class="fc" id="L62">        return features.containsAll(required);</span>
+    }
+}
+</pre><div class="footer"><span class="right">Created with <a href="http://www.jacoco.org/jacoco">JaCoCo</a> 0.8.12.202403310830</span></div></body></html>

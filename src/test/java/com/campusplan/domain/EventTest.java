@@ -73,7 +73,9 @@ class EventTest {
         Event cancelled = new Event("E001", inviting("S001", "S002"), EventStatus.CANCELLED,
                 Map.of("S001", AttendanceResponse.PENDING, "S002", AttendanceResponse.PENDING));
 
-        assertThrows(ValidationException.class, () -> cancelled.withDetails(inviting("S001", "S003")));
+        ValidationException e = assertThrows(ValidationException.class,
+                () -> cancelled.withDetails(inviting("S001", "S003")));
+        assertEquals("Only DRAFT events can be edited; event E001 is CANCELLED.", e.getMessage());
     }
 
     @Test
