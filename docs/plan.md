@@ -1,31 +1,31 @@
-﻿# CampusPlan Project Plan
-
-Fill in every `[Member X]` placeholder with a team member's name before exporting to `plan.pdf`. Use the same letter for the same person throughout.
+# CampusPlan Project Plan
 
 ## 1. Team, roles and working agreement
 
+Team members: Ethan Bryant, Gavin Kyle, Matthew Hajas, Omar Almishri.
+
 ### 1.1 Roles per iteration
 
-The brief requires coordination and release duties to rotate between iterations. Each member owns at least one feature through implementation, tests and integration, and reviews at least one teammate pull request per iteration.
+The brief requires coordination and release duties to rotate between iterations. Each member owns at least one feature through implementation, tests and integration, and reviews at least one teammate pull request per iteration. P1 roles record who did the work; P2 and P3 roles are the plan.
 
 | Role | P1 (weeks 1-3) | P2 (weeks 4-6) | P3 (weeks 7-9) |
 |---|---|---|---|
-| Coordinator (meetings, issue board, TA contact) | [Member A] | [Member B] | [Member C] |
-| Release manager (tag, `release.txt`, zip, demo video) | [Member B] | [Member C] | [Member A] |
-| Requirements and traceability owner | [Member C] | [Member A] | [Member B] |
+| Coordinator (meetings, issue board, TA contact) | Gavin Kyle | Ethan Bryant | Matthew Hajas |
+| Release manager (tag, `release.txt`, zip, demo video) | Omar Almishri | Matthew Hajas | Ethan Bryant |
+| Requirements and traceability owner | Gavin Kyle | Omar Almishri | Gavin Kyle |
 
 | Feature ownership | Owner | Reviewer |
 |---|---|---|
-| FR-01 Students and room catalogue | [Member A] | [Member B] |
-| FR-02 Availability and draft events | [Member B] | [Member A] |
-| FR-03 Storage and sample data | [Member B] | [Member C] |
-| FR-04 Suggestions (Strategy rules) | [Member C] | [Member A] |
-| FR-05 Confirm and cancel | [Member A] | [Member C] |
-| FR-06 Responses | [Member B] | [Member C] |
-| FR-07 Event lists and roster CSV | [Member C] | [Member B] |
-| FR-08 Undo/redo (Command) | [Member A] | [Member B] |
-| FR-09 CR-01 Closures and migration | [Member B] | [Member A] |
-| FR-10 CR-02 Replacement plans | [Member C] | [Member A] |
+| FR-01 Students and room catalogue | Gavin Kyle | Omar Almishri |
+| FR-02 Availability and draft events | Omar Almishri | Gavin Kyle |
+| FR-03 Storage and sample data | Omar Almishri | Gavin Kyle |
+| FR-04 Suggestions (Strategy rules) | Ethan Bryant | Omar Almishri |
+| FR-05 Confirm and cancel | Matthew Hajas | Ethan Bryant |
+| FR-06 Responses | Ethan Bryant | Matthew Hajas |
+| FR-07 Event lists and roster CSV | Matthew Hajas | Gavin Kyle |
+| FR-08 Undo/redo (Command) | Gavin Kyle | Omar Almishri |
+| FR-09 CR-01 Closures and migration | Omar Almishri | Matthew Hajas |
+| FR-10 CR-02 Replacement plans | Ethan Bryant | Gavin Kyle |
 | FR-11 Final integration, user guide | All, led by the P3 release manager | - |
 
 ### 1.2 Working agreement
@@ -79,15 +79,15 @@ Project launch: Monday 5 October 2026. Releases: P1 due 24 October, P2 due 16 No
 
 | Week | Dates | Work | Owner(s) | Done when |
 |---|---|---|---|---|
-| 1 | 5-11 Oct | Team agreement, client Q&A (at least 5 questions), backlog, repository and build skeleton | [Member A], all | Questions and answers recorded; `./mvnw test` passes on `main` |
-| 2 | 12-18 Oct | Use cases and acceptance criteria (`Requirements.pdf`), interface contracts, diagrams, first three ADRs, risks | [Member C], [Member A] | `Requirements.pdf` and `design.md` drafted and reviewed |
-| 3 | 19-24 Oct | FR-01 to FR-03 vertical slice, sample data, traceability, test report, retrospective, P1 demo video | [Member A] FR-01, [Member B] FR-02 and FR-03, [Member C] docs | All P1 tests pass, tag `p1`, `p1.zip` and `p1_demo.mp4` submitted |
-| 4 | 26 Oct-1 Nov | Act on P1 feedback; TA design checkpoint (5 minutes: components, two patterns, a working feature, top integration risk); scheduling rules (Strategy) and `SchedulingService.suggest` | [Member C] FR-04, [Member B] P1 fixes | Each TA finding has an action recorded in its issue; rule classes unit-tested |
-| 5 | 2-8 Nov | FR-04 ranking and explanations, FR-05 confirm and cancel, FR-06 responses, `CommandHistory` | [Member C], [Member A], [Member B] | Brief section 3 acceptance table passes as tests |
-| 6 | 9-16 Nov | FR-07 lists and CSV, FR-08 undo/redo across all mutations, NFR-03 timing test, full regression, `pattern_catalogue.pdf`, `changelog.md`, P2 demo, retain a P2 JSON sample | [Member C] FR-07, [Member A] FR-08, [Member B] release | All P2 tests pass, tag `p2`, `p2.zip` and `p2_demo.mp4` submitted |
-| 7 | 17-23 Nov | Change-impact analysis for CR-01 and CR-02, revised acceptance criteria, migration approach, updated ADR | [Member A] coordinator, all | Week 7 documents submitted |
-| 8 | 24-30 Nov | FR-09 closures and P2 file migration; FR-10 preview, confirm and undo; regression | [Member B] FR-09, [Member C] FR-10 | Migration and failed-reschedule rollback tests pass |
-| 9 | 1-9 Dec | Acceptance testing, user guide, known issues, final retrospective, group and individual demos | [Member A] release, all | Tag `p3`, `p3.zip` and all videos submitted |
+| 1 | 5-11 Oct | Team agreement, client Q&A (at least 5 questions), backlog, repository and build skeleton | Gavin Kyle, all | Repository and build skeleton on `main`; `./mvnw test` passes |
+| 2 | 12-18 Oct | Use cases and acceptance criteria (`Requirements.pdf`), interface contracts, diagrams, first three ADRs, risks | Gavin Kyle (requirements), Omar Almishri (design) | `requirements.pdf` and `design.md` drafted |
+| 3 | 19-24 Oct | FR-01 to FR-03 vertical slice, sample data, traceability, test report, retrospective, P1 demo video | Gavin Kyle FR-01 and docs, Omar Almishri FR-02, FR-03 and release | All P1 tests pass, tag `p1`, `p1.zip` and `p1_demo.mp4` submitted |
+| 4 | 26 Oct-1 Nov | Act on P1 feedback; TA design checkpoint (5 minutes: components, two patterns, a working feature, top integration risk); scheduling rules (Strategy) and `SchedulingService.suggest` | Ethan Bryant FR-04, Omar Almishri P1 fixes | Each TA finding has an action recorded in its issue; rule classes unit-tested |
+| 5 | 2-8 Nov | FR-04 ranking and explanations, FR-05 confirm and cancel, FR-06 responses, `CommandHistory` | Ethan Bryant FR-04 and FR-06, Matthew Hajas FR-05, Gavin Kyle `CommandHistory` | Brief section 3 acceptance table passes as tests |
+| 6 | 9-16 Nov | FR-07 lists and CSV, FR-08 undo/redo across all mutations, NFR-03 timing test, full regression, `pattern_catalogue.pdf`, `changelog.md`, P2 demo, retain a P2 JSON sample | Matthew Hajas FR-07 and release, Gavin Kyle FR-08 | All P2 tests pass, tag `p2`, `p2.zip` and `p2_demo.mp4` submitted |
+| 7 | 17-23 Nov | Change-impact analysis for CR-01 and CR-02, revised acceptance criteria, migration approach, updated ADR | Matthew Hajas (coordinator), all | Week 7 documents submitted |
+| 8 | 24-30 Nov | FR-09 closures and P2 file migration; FR-10 preview, confirm and undo; regression | Omar Almishri FR-09, Ethan Bryant FR-10 | Migration and failed-reschedule rollback tests pass |
+| 9 | 1-9 Dec | Acceptance testing, user guide, known issues, final retrospective, group and individual demos | Ethan Bryant (release), all | Tag `p3`, `p3.zip` and all videos submitted |
 
 ## 4. Risks
 
@@ -95,9 +95,9 @@ Scores are 1 (low) to 3 (high). The top five are ordered by likelihood times imp
 
 | # | Risk | Likelihood | Impact | Mitigation | Owner |
 |---|---|---|---|---|---|
-| R1 | Scheduling rules (FR-04 to FR-06) are misread: tie-break order, half-open boundaries, room failures counted first, ACCEPTED conflicts | 3 | 3 | Turn every brief section 3 example into a JUnit test before coding. Use one rule class per check (Strategy) so each boundary is tested on its own. Ask the TA about anything unclear and record the answer in the issue. | [Member C] |
-| R2 | Undo/redo misses an operation or restores only part of a multi-record change (event plus reservation) | 2 | 3 | Every mutation goes through `CommandHistory` (contract in `design.md` 2.4). Use a composite command for multi-record actions. Add a test per mutation type, plus undo after scheduling. | [Member A] |
-| R3 | P3 cannot load P2 files or loses responses during migration | 2 | 3 | `formatVersion` is in the file from P1. Keep the P2 sample file in the repository at the `p2` tag. Write a migration test from that exact file before changing the format. | [Member B] |
+| R1 | Scheduling rules (FR-04 to FR-06) are misread: tie-break order, half-open boundaries, room failures counted first, ACCEPTED conflicts | 3 | 3 | Turn every brief section 3 example into a JUnit test before coding. Use one rule class per check (Strategy) so each boundary is tested on its own. Ask the TA about anything unclear and record the answer in the issue. | Ethan Bryant |
+| R2 | Undo/redo misses an operation or restores only part of a multi-record change (event plus reservation) | 2 | 3 | Every mutation goes through `CommandHistory` (contract in `design.md` 2.4). Use a composite command for multi-record actions. Add a test per mutation type, plus undo after scheduling. | Gavin Kyle |
+| R3 | P3 cannot load P2 files or loses responses during migration | 2 | 3 | `formatVersion` is in the file from P1. Keep the P2 sample file in the repository at the `p2` tag. Write a migration test from that exact file before changing the format. | Omar Almishri |
 | R4 | Integration conflicts and late merges near deadlines (P1 work was merged in the last days) | 3 | 2 | Small pull requests merged at least twice a week. Shared contracts change only by reviewed pull request. A feature freeze two days before each release. | Coordinator of the iteration |
 | R5 | Environment differences break the build for someone (P1: a member's default JDK was 17, but the project needs 21) | 2 | 2 | README states JDK 21 and how to set `JAVA_HOME`. Two members run the fresh-clone check before every tag. Dependency versions are pinned in `pom.xml`. | Release manager of the iteration |
 
@@ -146,26 +146,29 @@ flowchart LR
 
 ### 6.1 P1 retrospective
 
-Held on: [date]. Present: [names].
+Written by Omar Almishri on 26 October 2026 from the repository history, at the P1 release. The whole team reviews it at the first P2 meeting and records any changes in section 6.3.
 
-**Facts from P1 to discuss** (from the repository history):
+**What happened in P1**
 
 - The repository was created on 20 October. FR-01 was merged on 25 October, and FR-02 and FR-03 were implemented on 26 October, after the 24 October due date.
-- Checking the code against `Requirements.pdf` late in P1 found ten acceptance criteria the code did not yet meet. All were fixed before release, and one requirement (reset to sample data) was removed because it contradicted the brief.
-- One defect was found by running the real application rather than the tests: piped input starting with a byte-order mark shifted every menu answer. It was fixed with a regression test.
+- Checking the code against `requirements.pdf` late in P1 found ten acceptance criteria the code did not yet meet. All were fixed before release, and one requirement (reset to sample data) was removed because it contradicted the brief.
+- One defect was found only by running the real application: piped input starting with a byte-order mark shifted every menu answer. It was fixed with a regression test.
 - A member's default JDK was 17, while the project needs 21.
-- The `issue` column of `traceability.csv` is empty because work was not tracked in GitHub issues.
+- The client clarification questions were written at the end of P1 and have not been answered yet.
+- Work was not tracked in GitHub issues, so the `issue` column of `traceability.csv` is empty.
 
 | What went well | What did not go well | Action for P2 | Owner | Due |
 |---|---|---|---|---|
-| [team to fill] | [team to fill] | [team to fill] | [Member X] | [date] |
-| | | | | |
-| | | | | |
+| The layered design let FR-02 and FR-03 be built and tested without changing FR-01 code. 208 tests pass from a clean clone; domain and application coverage is above 96%. | Most P1 work happened in the last days, after the due date. | Start FR-04 in week 4 and merge small pull requests at least twice a week, with a feature freeze two days before the P2 deadline. | Ethan Bryant (P2 coordinator) | 1 Nov |
+| Writing `requirements.pdf` with numbered acceptance criteria made it possible to check the code against every one and to build `traceability.csv` from real tests. | The code was only compared with the requirements at the end, so ten gaps were found late. | Each pull request lists the AC numbers it covers and updates `traceability.csv` in the same pull request. | Omar Almishri (P2 traceability owner) | Every P2 pull request |
+| Running the real application, not only the tests, found a defect the tests missed. | P1 implementation work was not spread across all four members. | Every member owns at least one P2 feature (FR-04 to FR-08) and reviews at least one pull request in week 4. | All | 8 Nov |
+| | The client questions were not asked during P1. | Ask the eight questions in `clarifications.md` at the week 4 tutorial and record the answers there. | Ethan Bryant | 1 Nov |
+| | No GitHub issues; environment differences (JDK 17 vs 21). | Create an issue per FR with its acceptance criteria and fill the `issue` column; two members run the fresh-clone build before each tag. | Matthew Hajas (P2 release manager) | 1 Nov |
 
 ### 6.2 P2 retrospective
 
-To be completed at the end of week 6.
+Held at the end of week 6, before the P2 release.
 
 ### 6.3 Plan updates after P1
 
-Record here how the plan changed after the retrospective (for example new owners, moved dates, new risks).
+Changes agreed at the first P2 meeting are recorded here with the date.

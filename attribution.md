@@ -1,4 +1,4 @@
-﻿# Attribution
+# Attribution
 
 This file records generative AI use (required for every release) and the third-party libraries and sources the project uses.
 
@@ -30,17 +30,14 @@ All uses below were in one Claude Code session with Claude Opus 5.5 (Anthropic),
 | 26 Oct | Align code with `Requirements.pdf` | Claude compared the code with UC-01 to UC-07 and AC-01 to AC-07 and listed ten gaps. Omar chose to fix them before writing traceability, and to drop the "reset to sample data with YES" requirement because it contradicts the brief. | Generated code and tests for the nine kept gaps. | `Main.java`, `application/SeedLoader.java`, `application/EventService.java`, `domain/Event.java`, `persistence/JsonDataStore.java`, `ui/CampusPlanCli.java`, `ui/CorruptDataPrompt.java`, tests in `EventTest`, `EventServiceTest`, `JsonDataStoreTest`, `CampusPlanCliPlanningAcceptanceTest`, `CorruptDataPromptTest` | Omar's decisions as above. Commit 162b91c. | `./mvnw test`: 205 tests, 0 failures; real run of corrupt-file recovery and the seed menu. |
 | 26 Oct | Traceability and coverage | Move `traceability.csv` to `docs/`, add FR-02 and FR-03 rows from real test names, regenerate the test report. | Rebuilt `traceability.csv` (184 rows), five more tests for uncovered acceptance criteria, JaCoCo in `pom.xml`, regenerated reports, updated test strategy. | `docs/traceability.csv`, `docs/test-report/`, `pom.xml`, `JsonDataStoreTest`, `EventServiceTest`, `EventTest` | Accepted. Claude kept the existing room-catalogue rows as FR-03 after finding that `Requirements.pdf` assigns UC-01 to FR-03. Commit 8cf6bec. | Script check that every `test_id` names a real test method and every test is listed; `./mvnw test`: 208 tests, 0 failures; coverage domain 98.2%, application 96.8% of lines. |
 | 26 Oct | Design document | Write `docs/design.md`: class diagram, interface contracts (event planning, scheduling, storage, undo/redo), two pattern proposals, three ADRs. | Generated document. | `docs/design.md` | Accepted as drafted; patterns (Command, Strategy) to be reviewed by the team. Commit 4131959. | Class diagram checked against the source; search confirmed the domain package has no I/O imports. |
-| 26 Oct | Plan document | Write `docs/plan.md`: roles, backlog with acceptance criteria, schedule, top 5 risks, dependencies, retrospective section. | Generated document with name placeholders and an empty retrospective table. | `docs/plan.md` | Names and retrospective conclusions to be filled in by the team. Commit 5c5ab01. | Dates checked against the brief and git history. |
+| 26 Oct | Plan document | Write `docs/plan.md`: roles, backlog with acceptance criteria, schedule, top 5 risks, dependencies, retrospective section. | Generated document. | `docs/plan.md` | Omar supplied the team member names. Claude wrote the P1 retrospective from the repository history; the team reviews it at the first P2 meeting. Commit 5c5ab01 and the release commit. | Dates checked against the brief and git history. |
 | 26 Oct | README and attribution | Update the README for storage, seed loading and reset/backup; write this disclosure; cite libraries. | Generated text; `exec-maven-plugin` pinned in `pom.xml`. | `README.md`, `attribution.md`, `pom.xml` | Accepted. | `./mvnw -q compile exec:java` run with a scratch data file. |
+| 26 Oct | Release check and P1 package | Check everything against the P1 rubric and the section 12 layout and list gaps; write `docs/release.txt`; build `p1.zip` without `target/` or `.git`. | Gap list; `design.pdf`, `plan.pdf` and `clarifications.pdf` rendered from Markdown; `clarifications.md` with eight client questions and the assumptions used in P1; `release.txt` and `p1.zip`. | `docs/*.pdf`, `docs/clarifications.md`, `docs/requirements.pdf` (renamed only), `docs/plan.md`, `attribution.md`, `p1.zip` (not committed) | Omar asked that no placeholder text be left: the questions are recorded as not yet asked, with no answers, because no client answers exist. Real sample-data names were replaced with invented ones. | Fresh clone of the release commit: `./mvnw test` 208 tests, 0 failures; zip contents checked by script (no `target/`, `.git/` or `data/`). |
 
 ### 1.3 Transcripts
 
-- Omar Almishri: exported Claude Code transcript of the 26 October session, with confidential information removed: `[file name to be added]`.
-- Gavin Kyle: `[file name to be added]`.
+- Omar Almishri: `docs/transcripts/omar-almishri-p1-claude.txt`, the exported Claude Code transcript of the 26 October session, with confidential information removed.
 
-### 1.4 Members who did not use generative AI
-
-`[Name] | [date] | I did not use generative AI for P1.`
 
 ## 2. Third-party libraries and tools
 
