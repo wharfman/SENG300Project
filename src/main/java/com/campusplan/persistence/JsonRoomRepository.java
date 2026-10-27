@@ -93,12 +93,12 @@ public class JsonRoomRepository implements RoomRepository {
     }
 
     /**
-     * Ensures no two rooms share an ID, or a name ignoring case.
+     * Ensures no two rooms share an ID, or a name ignoring case. Also used by {@link JsonDataStore}.
      *
      * @param rooms the parsed catalogue
      * @throws StorageException naming the first duplicate found
      */
-    private static void checkUnique(List<Room> rooms) {
+    static void checkUnique(List<Room> rooms) {
         Set<String> ids = new HashSet<>();
         Set<String> names = new HashSet<>();
         for (Room room : rooms) {
