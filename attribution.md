@@ -34,7 +34,15 @@ All uses below were in one Claude Code session with Claude Opus 5.5 (Anthropic),
 | 26 Oct | README and attribution | Update the README for storage, seed loading and reset/backup; write this disclosure; cite libraries. | Generated text; `exec-maven-plugin` pinned in `pom.xml`. | `README.md`, `attribution.md`, `pom.xml` | Accepted. | `./mvnw -q compile exec:java` run with a scratch data file. |
 | 26 Oct | Release check and P1 package | Check everything against the P1 rubric and the section 12 layout and list gaps; write `docs/release.txt`; build `p1.zip` without `target/` or `.git`. | Gap list; `design.pdf`, `plan.pdf` and `clarifications.pdf` rendered from Markdown; `clarifications.md` with eight client questions and the assumptions used in P1; `release.txt` and `p1.zip`. | `docs/*.pdf`, `docs/clarifications.md`, `docs/requirements.pdf` (renamed only), `docs/plan.md`, `attribution.md`, `p1.zip` (not committed) | Omar asked that no placeholder text be left: the questions are recorded as not yet asked, with no answers, because no client answers exist. Real sample-data names were replaced with invented ones. | Fresh clone of the release commit: `./mvnw test` 208 tests, 0 failures; zip contents checked by script (no `target/`, `.git/` or `data/`). |
 
-### 1.3 Transcripts
+### 1.3 Ethan Bryant
+
+Ethan Bryant | 26 October 2026 | I did not use generative AI for P1.
+
+### 1.4 Matthew Hajas
+
+Matthew Hajas | 26 October 2026 | I did not use generative AI for P1.
+
+### 1.5 Transcripts
 
 - Omar Almishri: `docs/transcripts/omar-almishri-p1-claude.txt`, the exported Claude Code transcript of the 26 October session, with confidential information removed.
 
