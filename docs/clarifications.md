@@ -1,0 +1,22 @@
+# Client Clarifications (P1)
+
+The brief asks for at least five clarification questions to the client (the TA), with the answers, our assumptions and unresolved risks. Answers must be copied from the TA's actual replies. Where there was no answer before the release, the assumption column records what the P1 code does, and the question stays open.
+
+Asked by: [member name], [date], [where: tutorial Q&A, email, or issue link]
+
+| # | Question | Client answer | Assumption used in P1 | Where it shows in the code |
+|---|---|---|---|---|
+| Q1 | May the organizer reload the sample data while data already exists (a reset), or only when the application is empty? | [TA answer] | Only into an empty application, as the brief says. Reset is done by removing the data file, as described in the README. | `JsonDataStore.loadSeed`, `CampusPlanCli.offerSeed` |
+| Q2 | If the organizer adds availability that is already fully covered, is that an error, or just "nothing changed"? | [TA answer] | Not an error: CampusPlan says nothing changed, and the data is untouched. | `CampusPlanCli.changeAvailability` (AC-04.6) |
+| Q3 | When removing availability, must the range match an existing interval exactly, or may it cut part of one? | [TA answer] | It may cut part of an interval; the rest is kept or split in two. Removing a range with no availability at all is an error. | `Availability.without` (AC-04.7, AC-04.8) |
+| Q4 | If the same student is listed twice as an invitee, should CampusPlan reject the draft or quietly keep one copy? | [TA answer] | Reject it, naming the repeated ID, because the brief says invitees are distinct. | `EventDetails` (AC-05.9) |
+| Q5 | May a draft event's date window be in the past? | [TA answer] | Yes. The brief has no "today" rule, and dates are stored without time zones, so tests and sample data can use fixed dates. | `EventDetails` (no date check) |
+| Q6 | If the saved data file is damaged, should CampusPlan only refuse to start, or may it offer to set the file aside and start empty? | [TA answer] | Offer both: quit is the default; setting aside needs YES and keeps the old file under a new name. The file is never overwritten. | `CorruptDataPrompt`, `JsonDataStore.setAside` (AC-01.13 to AC-01.15) |
+| Q7 | Must two students have different names, or only different emails? | [TA answer] | Only emails must be unique; names may repeat, and search shows each match with its ID. | `StudentService.ensureEmailUnused` |
+| Q8 | Is a room catalogue change between sessions expected, for example a new room added to the seed file? | [TA answer] | No. Once data is saved, rooms come from the data file; editing rooms is outside the baseline scope. | `JsonDataStore.open` |
+
+## Unresolved risks
+
+- **Ranking details (P2).** The brief defines the tie-break order, but not how "unused seats" is counted when fewer invitees are eligible than invited. We plan to use room capacity minus the number of invitees, and will confirm this with the TA before FR-04 is coded.
+- **Availability edits and ACCEPTED responses (P2).** It is not yet clear whether removing availability that only partly overlaps an accepted event should also be rejected. We plan to reject any overlap and name the affected events.
+- **Q1 to Q8** above remain risks until the TA answers. If an answer differs from our assumption, the change goes through an issue, a test update and a `traceability.csv` update.
