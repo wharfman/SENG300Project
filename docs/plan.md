@@ -172,3 +172,5 @@ Held at the end of week 6, before the P2 release.
 ### 6.3 Plan updates after P1
 
 Changes agreed at the first P2 meeting are recorded here with the date.
+
+- **22 November 2026:** FR-04 (suggestions) reassigned from Ethan Bryant to Gavin Kyle.

@@ -313,7 +313,7 @@ public class SchedulingService {
 
 **Data ownership:** `SchedulingService` reads students, rooms, availability and events through the repositories and writes events only through `EventRepository.save`. `Suggestion` and `SuggestionResult` are immutable records owned by the caller.
 
-`Event` gains nullable fields `roomId`, `date`, `start` and `end`, which are set only when the status is `SCHEDULED`. The data file format version goes to 2, and version 1 files still load, with those fields empty.
+`Event` has nullable fields `roomId` and `slot` (an `AvailabilityInterval` holding the date, start and end), which are set only when the status is `SCHEDULED`. These were added to the domain model for FR-04, so the rules can check scheduled events. FR-05 saves them: the data file format version goes to 2, and version 1 files still load, with those fields empty.
 
 ### 2.3 Storage (delivered in P1)
 

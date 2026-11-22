@@ -1,8 +1,8 @@
 /*
  * EventTest.java
  *
- * Unit tests for Event: new drafts, editing drafts, and keeping one response
- * per invitee.
+ * Unit tests for Event: new drafts, editing drafts, keeping one response
+ * per invitee, and the room and time of scheduled events.
  */
 package com.campusplan.domain;
 
@@ -10,6 +10,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -85,6 +86,48 @@ class EventTest {
                 EventStatus.DRAFT, Map.of("S001", AttendanceResponse.PENDING)));
         assertThrows(ValidationException.class, () -> new Event("E001", inviting("S001", "S002"),
                 EventStatus.DRAFT, Map.of("S001", AttendanceResponse.PENDING, "S009", AttendanceResponse.PENDING)));
+    }
+
+    @Test
+    @DisplayName("Given a room and time, when a SCHEDULED event is created, then it keeps both")
+    void scheduledEventHasRoomAndTime() {
+        AvailabilityInterval slot = new AvailabilityInterval(DAY, LocalTime.of(13, 0), LocalTime.of(14, 0));
+
+        Event event = new Event("E001", inviting("S001", "S002"), EventStatus.SCHEDULED,
+                Map.of("S001", AttendanceResponse.PENDING, "S002", AttendanceResponse.PENDING), "R01", slot);
+
+        assertEquals("R01", event.roomId());
+        assertEquals(slot, event.slot());
+    }
+
+    @Test
+    @DisplayName("Given a missing room or time, when a SCHEDULED event is created, then it is rejected")
+    void scheduledEventNeedsRoomAndTime() {
+        AvailabilityInterval slot = new AvailabilityInterval(DAY, LocalTime.of(13, 0), LocalTime.of(14, 0));
+        Map<String, AttendanceResponse> pending =
+                Map.of("S001", AttendanceResponse.PENDING, "S002", AttendanceResponse.PENDING);
+
+        ValidationException e = assertThrows(ValidationException.class, () -> new Event("E001",
+                inviting("S001", "S002"), EventStatus.SCHEDULED, pending));
+        assertEquals("Scheduled event E001 needs a room and a time.", e.getMessage());
+        assertThrows(ValidationException.class, () -> new Event("E001", inviting("S001", "S002"),
+                EventStatus.SCHEDULED, pending, " ", slot));
+        assertThrows(ValidationException.class, () -> new Event("E001", inviting("S001", "S002"),
+                EventStatus.SCHEDULED, pending, "R01", null));
+    }
+
+    @Test
+    @DisplayName("Given a room or time, when a DRAFT or CANCELLED event is created, then it is rejected")
+    void onlyScheduledEventsHaveRoomAndTime() {
+        AvailabilityInterval slot = new AvailabilityInterval(DAY, LocalTime.of(13, 0), LocalTime.of(14, 0));
+        Map<String, AttendanceResponse> pending =
+                Map.of("S001", AttendanceResponse.PENDING, "S002", AttendanceResponse.PENDING);
+
+        ValidationException e = assertThrows(ValidationException.class, () -> new Event("E001",
+                inviting("S001", "S002"), EventStatus.DRAFT, pending, "R01", slot));
+        assertEquals("Only SCHEDULED events have a room and time; event E001 is DRAFT.", e.getMessage());
+        assertThrows(ValidationException.class, () -> new Event("E001", inviting("S001", "S002"),
+                EventStatus.CANCELLED, pending, null, slot));
     }
 
     @Test
