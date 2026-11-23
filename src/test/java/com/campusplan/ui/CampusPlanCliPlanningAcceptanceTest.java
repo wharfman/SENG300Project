@@ -12,6 +12,7 @@ import com.campusplan.application.EventService;
 import com.campusplan.application.RoomService;
 import com.campusplan.application.SeedLoader;
 import com.campusplan.application.StudentService;
+import com.campusplan.application.scheduling.SchedulingService;
 import com.campusplan.persistence.JsonDataStore;
 import com.campusplan.persistence.JsonRoomRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -91,7 +92,8 @@ class CampusPlanCliPlanningAcceptanceTest {
         BufferedReader in = new BufferedReader(new StringReader(String.join("\n", lines) + "\n"));
         new CampusPlanCli(students, new RoomService(store.rooms()),
                 new AvailabilityService(store.availability(), students),
-                new EventService(store.events(), students), seed, in,
+                new EventService(store.events(), students),
+                new SchedulingService(store.events(), store.rooms(), store.availability()), seed, in,
                 new PrintStream(bytes, true, StandardCharsets.UTF_8)).run();
         return bytes.toString(StandardCharsets.UTF_8);
     }
