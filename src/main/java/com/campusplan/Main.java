@@ -11,6 +11,7 @@ import com.campusplan.application.EventService;
 import com.campusplan.application.RoomService;
 import com.campusplan.application.SeedLoader;
 import com.campusplan.application.StudentService;
+import com.campusplan.application.scheduling.SchedulingService;
 import com.campusplan.domain.Room;
 import com.campusplan.persistence.JsonDataStore;
 import com.campusplan.persistence.JsonRoomRepository;
@@ -79,6 +80,7 @@ public final class Main {
                 new RoomService(store.rooms()),
                 new AvailabilityService(store.availability(), students),
                 new EventService(store.events(), students),
+                new SchedulingService(store.events(), store.rooms(), store.availability()),
                 seedLoader(store), in, System.out).run();
     }
 

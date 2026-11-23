@@ -17,20 +17,37 @@ import java.util.Set;
  * Only a {@link EventStatus#DRAFT} can have its details edited.
  *
  * <p>Instances are immutable; editing an event means creating a new instance with the same ID.
- * The room and start/end time of a scheduled event are added with scheduling in P2 (FR-05).
+ * A {@link EventStatus#SCHEDULED} event has a room and a time; no other status has either.
  *
  * @param id        generated identifier, never blank
  * @param details   the planning fields
  * @param status    where the event is in its life cycle
  * @param responses each invitee's reply, keyed by student ID
+ * @param roomId    reserved room, set only when SCHEDULED, otherwise null
+ * @param slot      reserved date and time, set only when SCHEDULED, otherwise null
  */
 public record Event(String id, EventDetails details, EventStatus status,
-                    Map<String, AttendanceResponse> responses) {
+                    Map<String, AttendanceResponse> responses, String roomId, AvailabilityInterval slot) {
+
+    /**
+     * Creates an event with no room or time, for any status other than SCHEDULED.
+     *
+     * @param id        generated identifier, never blank
+     * @param details   the planning fields
+     * @param status    where the event is in its life cycle
+     * @param responses each invitee's reply, keyed by student ID
+     * @throws ValidationException if a field is missing, the responses do not match the invitees,
+     *                             or the status is SCHEDULED
+     */
+    public Event(String id, EventDetails details, EventStatus status, Map<String, AttendanceResponse> responses) {
+        this(id, details, status, responses, null, null);
+    }
 
     /**
      * Validates every field and checks that responses match the invitees exactly.
      *
-     * @throws ValidationException if a field is missing or the responses do not match the invitees
+     * @throws ValidationException if a field is missing, the responses do not match the invitees,
+     *                             or the room and time do not match the status
      */
     public Event {
         if (id == null || id.isBlank()) {
@@ -43,6 +60,12 @@ public record Event(String id, EventDetails details, EventStatus status,
                 // Not containsValue(null): immutable maps such as Map.of throw on a null argument.
                 || responses.values().stream().anyMatch(Objects::isNull)) {
             throw new ValidationException("Event " + id + " must have exactly one response per invitee.");
+        }
+        if (status == EventStatus.SCHEDULED && (roomId == null || roomId.isBlank() || slot == null)) {
+            throw new ValidationException("Scheduled event " + id + " needs a room and a time.");
+        }
+        if (status != EventStatus.SCHEDULED && (roomId != null || slot != null)) {
+            throw new ValidationException("Only SCHEDULED events have a room and time; event " + id + " is " + status + ".");
         }
         // Copy in invitee order so listings follow the order the organizer entered.
         Map<String, AttendanceResponse> ordered = new LinkedHashMap<>();

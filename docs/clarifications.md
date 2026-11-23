@@ -18,5 +18,5 @@ The brief asks for at least five clarification questions to the client (the TA),
 ## Unresolved risks
 
 - **All eight assumptions are unconfirmed.** If the client disagrees with one, the related code, tests and acceptance criteria change in P2.
-- **Ranking details (P2).** The brief defines the tie-break order, but not how "unused seats" is counted when fewer invitees are eligible than invited. We plan to use room capacity minus the number of invitees.
+- **Ranking details (P2).** The brief defines the tie-break order, but not how "unused seats" is counted when fewer invitees are eligible than invited. For FR-04 we used room capacity minus the number of invitees (`SchedulingService.suggest`), but we still need to confirm this with the client.
 - **Availability edits and ACCEPTED responses (P2).** It is not yet clear whether removing availability that only partly overlaps an accepted event should also be rejected. We plan to reject any overlap and name the affected events.

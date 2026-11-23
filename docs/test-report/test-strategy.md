@@ -8,15 +8,20 @@
 | Unit | `AvailabilityIntervalTest`, `AvailabilityTest` | 30-minute boundaries, opening hours, start before end, half-open overlap, merging overlapping and touching intervals, removing and splitting, full coverage of an event |
 | Unit | `EventDetailsTest`, `EventTest` | Every draft limit on both sides (title, invitees, window, duration, minimum attendance), PENDING responses, responses kept on edit, only DRAFT editable |
 | Unit | `StudentServiceTest`, `RoomServiceTest`, `AvailabilityServiceTest`, `EventServiceTest` | Application rules: ID assignment, duplicate emails, unknown students and events, sorting, and that every rejected operation leaves storage unchanged. Tested against the in-memory repositories. |
+| Unit | `CapacityRuleTest`, `FeatureRuleTest`, `RoomFreeRuleTest`, `AvailabilityRuleTest`, `NoConflictRuleTest` | Each FR-04 scheduling rule on its own, with the reason it gives: capacity at and one below the invitee count, missing features named, adjacent bookings allowed and every kind of overlap rejected, full versus partial availability, ACCEPTED conflicts versus PENDING, DECLINED and adjacent events |
+| Unit | `SchedulingServiceTest` | FR-04 suggestion search over in-memory storage: every brief section 3 acceptance example, the full ranking order, the five-suggestion limit, 10 repeated searches giving the same result, opening-hour boundaries, the no-result counts, rejected searches, and that searching changes nothing |
 | Integration | `JsonRoomRepositoryTest` | Room catalogue JSON parsed with Jackson, and checks across the whole catalogue (duplicate IDs and names, malformed or empty JSON, missing file) |
 | Integration | `RoomCatalogueIntegrationTest` | `RoomService` working over the real seed catalogue loaded by `JsonRoomRepository` |
 | Integration | `JsonDataStoreTest` | Real JSON round trips in JUnit temporary folders: IDs kept, UTF-8, corrupt and invalid files rejected without change, line and column in errors, failed and interrupted saves, unchanged saves not written, setting a corrupt file aside, seed loading |
 | Integration | `SampleDataTest` | Both files in `sample-data/` load, meet the size rules, and have (or lack) a valid suggestion as documented |
 | Acceptance | `CampusPlanCliAcceptanceTest` | End-user scenarios from UC-02 and UC-03, run by typing operator input into the CLI and checking the printed output |
 | Acceptance | `CampusPlanCliPlanningAcceptanceTest` | UC-01 and UC-04 to UC-07 through the CLI over a real data file, including the P1 demo: add students, duplicate rejected, availability, room filter, draft, restart |
+| Acceptance | `CampusPlanCliSuggestionAcceptanceTest` | FR-04 through the CLI over the seed catalogue: the explained suggestions, their ranked order, the no-result message with both counts, and an unknown event |
 | Acceptance | `CorruptDataPromptTest` | The startup choice after a corrupt data file: quit by default, set aside only after YES |
 
 Acceptance tests are fully automated. Every CLI scenario covered so far can be scripted, so there are no manual test steps. A restart is tested by running two CLI sessions against the same data file.
+
+The FR-04 examples that need an event that is already `SCHEDULED` (adjacent bookings, a student who accepted another event) are only tested at the service level for now, because the CLI can't schedule an event until FR-05 is done.
 
 `docs/traceability.csv` maps every acceptance criterion in `Requirements.pdf` to the tests that check it.
 
@@ -32,6 +37,7 @@ Acceptance tests are fully automated. Every CLI scenario covered so far can be s
   - Adjacent intervals 13:00-14:00 and 14:00-15:00 (half-open, no overlap).
   - Event titles of 1, 100 and 101 characters; 0, 1, 2, 20 and 21 invitees; windows of 1, 7 and 8 days.
   - Durations of -30, 0, 15, 30, 45, 90, 179, 180 and 210 minutes; minimum attendance of 0, 1, 2, n and n+1.
+  - Scheduling: room capacity equal to the number of invitees and one less; a booking at 13:00-14:00 checked against 12:00-13:00 and 14:00-15:00 (allowed) and four overlapping times (rejected); availability that just covers the time or misses it by 30 minutes; the first (08:00) and last (21:00) start of the day for a 60-minute event; six valid options cut down to five.
 - **Invalid-input partitions.** Each kind of bad input gets at least one case:
   - Names: null, empty and blank.
   - Emails: no `@`, two `@`, nothing before or after the `@`, and internal whitespace.

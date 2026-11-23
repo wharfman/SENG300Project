@@ -11,6 +11,9 @@ import com.campusplan.application.EventService;
 import com.campusplan.application.RoomService;
 import com.campusplan.application.SeedLoader;
 import com.campusplan.application.StudentService;
+import com.campusplan.application.scheduling.SchedulingService;
+import com.campusplan.application.scheduling.Suggestion;
+import com.campusplan.application.scheduling.SuggestionResult;
 import com.campusplan.domain.AvailabilityInterval;
 import com.campusplan.domain.Event;
 import com.campusplan.domain.EventDetails;
@@ -31,6 +34,7 @@ import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
@@ -61,6 +65,7 @@ public class CampusPlanCli {
              11. Edit draft event
              12. View event
              13. List events
+             14. Suggest times for event
               0. Quit""";
 
     /** Student workflows. */
@@ -71,6 +76,8 @@ public class CampusPlanCli {
     private final AvailabilityService availability;
     /** Draft event workflows. */
     private final EventService events;
+    /** Scheduling suggestions. */
+    private final SchedulingService scheduling;
     /** Offers sample data when the application starts empty. */
     private final SeedLoader seed;
     /** Operator input, read one line per prompt. */
@@ -85,16 +92,19 @@ public class CampusPlanCli {
      * @param rooms        room catalogue queries
      * @param availability availability workflows
      * @param events       draft event workflows
+     * @param scheduling   scheduling suggestions
      * @param seed         seed data offered at startup; {@link SeedLoader#NONE} to never offer it
      * @param in           operator input
      * @param out          destination for prompts and results
      */
     public CampusPlanCli(StudentService students, RoomService rooms, AvailabilityService availability,
-                         EventService events, SeedLoader seed, BufferedReader in, PrintStream out) {
+                         EventService events, SchedulingService scheduling, SeedLoader seed,
+                         BufferedReader in, PrintStream out) {
         this.students = students;
         this.rooms = rooms;
         this.availability = availability;
         this.events = events;
+        this.scheduling = scheduling;
         this.seed = seed;
         this.in = in;
         this.out = out;
@@ -125,6 +135,7 @@ public class CampusPlanCli {
                     case "11" -> editEvent();
                     case "12" -> viewEvent();
                     case "13" -> listEvents();
+                    case "14" -> suggestTimes();
                     default -> out.println("Unknown option: " + choice);
                 }
             } catch (ValidationException | StorageException e) {
@@ -311,6 +322,42 @@ public class CampusPlanCli {
             return;
         }
         all.forEach(e -> out.println(format(e) + "  (" + e.details().inviteeIds().size() + " invitees)"));
+    }
+
+    /**
+     * Prompts for a draft event ID and prints the top suggestions with who can and cannot attend,
+     * or, when none qualify, how many candidates were rejected and why.
+     */
+    private void suggestTimes() {
+        Event event = events.get(promptOrEmpty("Event ID"));
+        SuggestionResult result = scheduling.suggest(event.id());
+        int invitees = event.details().inviteeIds().size();
+        if (result.top().isEmpty()) {
+            out.println("No suggestions: no room and time can host " + event.id() + " " + event.details().title() + ".");
+            out.println("  Rejected for the room (too small, missing a feature, or already booked): "
+                    + result.rejectedForRoom());
+            out.println("  Rejected for attendance (fewer than " + event.details().minimumAttendance()
+                    + " eligible invitees): " + result.rejectedForAttendance());
+            return;
+        }
+        Map<String, Room> roomsById = rooms.list().stream().collect(Collectors.toMap(Room::id, r -> r));
+        out.println("Top suggestions for " + event.id() + " " + event.details().title()
+                + " (nothing is reserved until an event is scheduled):");
+        int rank = 1;
+        for (Suggestion s : result.top()) {
+            out.printf("%d. %s %s  %s %s-%s  %d of %d eligible%n", rank++, s.roomId(),
+                    roomsById.get(s.roomId()).name(), s.slot().date(), s.slot().start(), s.slot().end(),
+                    s.eligibleCount(), invitees);
+            out.println("   Eligible: " + s.eligible().stream()
+                    .map(id -> id + " " + students.get(id).name()).collect(Collectors.joining(", ")));
+            if (s.ineligibleReasons().isEmpty()) {
+                out.println("   Not eligible: none");
+            } else {
+                out.println("   Not eligible:");
+                s.ineligibleReasons().forEach((id, reason) ->
+                        out.println("     " + id + " " + students.get(id).name() + ": " + reason));
+            }
+        }
     }
 
     /**

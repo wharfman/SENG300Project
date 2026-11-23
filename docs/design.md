@@ -1,6 +1,6 @@
 # CampusPlan Design (P1)
 
-This document describes the delivered P1 code (FR-01 to FR-03) and the contracts the team agreed for P2. Every class in section 1 exists in `src/main/java`. Section 2 marks which operations are delivered and which are agreed for later releases.
+This document describes the delivered P1 code (FR-01 to FR-03), the P2 scheduling suggestions delivered so far (FR-04), and the contracts the team agreed for the rest of P2. Every class in section 1 exists in `src/main/java`. Section 2 marks which operations are delivered and which are agreed for later releases.
 
 ## 1. Architecture
 
@@ -9,7 +9,7 @@ CampusPlan has four layers, one package each under `com.campusplan`. Dependencie
 | Layer | Package | Responsibility | May depend on |
 |---|---|---|---|
 | Presentation | `ui` | Read operator input, print results and `Error:` lines | `application`, `domain` |
-| Application | `application` | Use-case operations and rules that span several records (unique emails, invitees exist, ID generation, sorting) | `persistence` interfaces, `domain` |
+| Application | `application`, `application.scheduling` | Use-case operations and rules that span several records (unique emails, invitees exist, ID generation, sorting, scheduling suggestions) | `persistence` interfaces, `domain` |
 | Domain | `domain` | Immutable records that validate themselves (field limits, interval and merge rules, draft rules) | nothing |
 | Persistence | `persistence` | Repository interfaces, in-memory test implementations, and the JSON file store | `domain` |
 
@@ -56,6 +56,23 @@ classDiagram
             +canLoad() boolean
             +datasets() List~String~
             +load(dataset)
+        }
+        class SchedulingService {
+            +suggest(eventId) SuggestionResult
+        }
+        class SuggestionResult {
+            <<record>>
+            top
+            rejectedForRoom
+            rejectedForAttendance
+        }
+        class Suggestion {
+            <<record>>
+            roomId
+            slot
+            eligible
+            ineligibleReasons
+            +eligibleCount() int
         }
     }
 
@@ -113,6 +130,8 @@ classDiagram
             details
             status
             responses
+            roomId
+            slot
             +draft(id, details)$ Event
             +withDetails(details) Event
         }
@@ -186,6 +205,7 @@ classDiagram
     CampusPlanCli --> AvailabilityService
     CampusPlanCli --> EventService
     CampusPlanCli --> SeedLoader
+    CampusPlanCli --> SchedulingService
     CampusPlanCli ..> ValidationException : catches
     CampusPlanCli ..> StorageException : catches
 
@@ -195,11 +215,17 @@ classDiagram
     AvailabilityService --> StudentService : student exists
     EventService --> EventRepository
     EventService --> StudentService : invitees exist
+    SchedulingService --> EventRepository
+    SchedulingService --> RoomRepository
+    SchedulingService --> AvailabilityRepository
+    SchedulingService ..> SuggestionResult : returns
+    SuggestionResult *-- Suggestion
 
     Availability "1" *-- "*" AvailabilityInterval
     Event *-- EventDetails
     Event --> EventStatus
     Event --> AttendanceResponse
+    Event --> AvailabilityInterval : slot, when SCHEDULED
     EventDetails --> RoomFeature
     Room --> RoomFeature
     Student ..> ValidationException : throws
@@ -288,10 +314,12 @@ The common rules for every operation:
 
 `AvailabilityService` (also delivered) follows the same pattern: `add`, `remove`, `get` and `isAvailable` each take a student ID, a date, a start time and an end time. `add` and `remove` return the student's merged intervals after the change.
 
-### 2.2 Scheduling (agreed for P2, FR-04 to FR-06)
+### 2.2 Scheduling (FR-04 delivered; FR-05 and FR-06 agreed for P2)
+
+`SchedulingService`, `Suggestion` and `SuggestionResult` are in `application.scheduling`. Only `suggest` is written so far. `confirm`, `cancel` and `respond` are what we agreed for FR-05 and FR-06.
 
 ```java
-public record Suggestion(String roomId, LocalDate date, LocalTime start, LocalTime end,
+public record Suggestion(String roomId, AvailabilityInterval slot,
                          List<String> eligible, Map<String, String> ineligibleReasons) { }
 
 public record SuggestionResult(List<Suggestion> top, int rejectedForRoom, int rejectedForAttendance) { }
@@ -306,14 +334,14 @@ public class SchedulingService {
 
 | Operation | Input | Result | Validation failures |
 |---|---|---|---|
-| `suggest` | ID of a `DRAFT` event | Up to 5 suggestions, ranked by eligible count (highest first), then date and time, then fewest unused seats, then room ID. If none qualify, `top` is empty and both rejection counts are set; a candidate that fails a room rule counts only as a room rejection. | Unknown event; event is not `DRAFT`. The result is read-only and reserves nothing. |
+| `suggest` (delivered) | ID of a `DRAFT` event | A candidate is one room and one start on a 30-minute boundary in the date window, ending by 22:00. Up to 5 valid candidates, ranked by eligible count (highest first), then date and time, then fewest unused seats (room capacity minus invitees), then room ID. Both rejection counts are always set; a candidate that fails a room rule counts only as a room rejection, so the counts never overlap. If none qualify, `top` is empty. | `No event with ID E404.`; `Only DRAFT events can get suggestions; event E001 is SCHEDULED.` The result is read-only and reserves nothing. |
 | `confirm` | Event ID and a suggestion previously returned | Event with status `SCHEDULED`, its room and time, and the room reserved | The suggestion is no longer valid when checked again (room taken, attendance below minimum). Rejected with no change. |
 | `cancel` | ID of a `SCHEDULED` event | Event with status `CANCELLED`, reservation released, responses kept | Event is not `SCHEDULED`. The CLI asks for confirmation before calling this. |
 | `respond` | Event ID, student ID, response | Event with the updated response | `ACCEPTED` when the student lacks full availability or has accepted an overlapping scheduled event; student is not an invitee |
 
-**Data ownership:** `SchedulingService` reads students, rooms, availability and events through the repositories and writes events only through `EventRepository.save`. `Suggestion` and `SuggestionResult` are immutable records owned by the caller.
+**Data ownership:** `SchedulingService` is built from the `EventRepository`, `RoomRepository` and `AvailabilityRepository`. `suggest` only reads them, through a read-only `Schedule` snapshot of the events and availability. The planned `confirm` and `respond` will write events only through `EventRepository.save`. `Suggestion` and `SuggestionResult` are immutable records owned by the caller; the CLI looks up student and room names for display.
 
-`Event` gains nullable fields `roomId`, `date`, `start` and `end`, which are set only when the status is `SCHEDULED`. The data file format version goes to 2, and version 1 files still load, with those fields empty.
+`Event` has nullable fields `roomId` and `slot` (an `AvailabilityInterval` holding the date, start and end), which are set only when the status is `SCHEDULED`. These were added to the domain model for FR-04, so the rules can check scheduled events. FR-05 saves them: the data file format version goes to 2, and version 1 files still load, with those fields empty.
 
 ### 2.3 Storage (delivered in P1)
 
@@ -404,19 +432,26 @@ classDiagram
 | Simpler alternative | Snapshot the whole store before each change and restore it on undo (Memento). It's simpler, but it copies all data for every change and can't describe what is being undone. We may still use it inside `CompositeCommand` if per-record undo becomes complex. |
 | Planned tests | `CommandHistoryTest`: undo after a create, redo after undo, new mutation clears redo, 20+ operations, failed command not recorded. `ScheduleUndoTest`: undoing a confirmation restores DRAFT status and frees the room. |
 
-### 3.2 Strategy: scheduling candidate rules (planned for P2)
+### 3.2 Strategy: scheduling candidate rules (delivered for FR-04)
 
-**Problem.** FR-04 needs every rejected candidate, and every ineligible invitee, to be explained ("room holds 5, event invites 6", "not available 13:00–15:00", "already accepted E002"). Room failures must be counted before attendance failures. CR-01 in P3 will add room closures as a new reason. Writing all the checks in one long method would mix the rules with the ranking and make each new rule an edit to that method.
+**Problem.** FR-04 needs every rejected candidate, and every ineligible invitee, to be explained ("room holds 5, event invites 6", "not available 13:00-15:00", "already accepted E002"). Room failures must be counted before attendance failures. CR-01 in P3 will add room closures as a new reason. Writing all the checks in one long method would mix the rules with the ranking and make each new rule an edit to that method.
 
 ```mermaid
 classDiagram
     class RoomRule {
         <<interface>>
-        +check(Event, Room, Slot, Schedule) Optional~String~
+        +check(Event, Room, AvailabilityInterval slot, Schedule) Optional~String~
     }
     class InviteeRule {
         <<interface>>
-        +check(String studentId, Slot, Schedule) Optional~String~
+        +check(String studentId, AvailabilityInterval slot, Schedule) Optional~String~
+    }
+    class Schedule {
+        <<record>>
+        events
+        availability
+        +availabilityOf(studentId) Availability
+        +scheduledOverlapping(slot) List~Event~
     }
     class CapacityRule
     class FeatureRule
@@ -424,10 +459,12 @@ classDiagram
     class AvailabilityRule
     class NoConflictRule
     class SchedulingService {
-        -roomRules List~RoomRule~
-        -inviteeRules List~InviteeRule~
+        -ROOM_RULES$ List~RoomRule~
+        -INVITEE_RULES$ List~InviteeRule~
         +suggest(eventId) SuggestionResult
     }
+    RoomRule ..> Schedule : reads
+    InviteeRule ..> Schedule : reads
     CapacityRule ..|> RoomRule
     FeatureRule ..|> RoomRule
     RoomFreeRule ..|> RoomRule
@@ -439,12 +476,12 @@ classDiagram
 
 | Item | Detail |
 |---|---|
-| Participants | `RoomRule` and `InviteeRule` (strategy interfaces); concrete rules `CapacityRule`, `FeatureRule`, `RoomFreeRule`, `AvailabilityRule`, `NoConflictRule`; `SchedulingService` (context). Planned files: `application/scheduling/*.java`. |
-| Collaboration | For each candidate, `SchedulingService` applies the room rules in order. The first failure gives the room rejection reason. If the room passes, it applies the invitee rules to each invitee to build the eligible list and the ineligible reasons, then ranks the valid candidates. |
+| Participants | `RoomRule` and `InviteeRule` (strategy interfaces); concrete rules `CapacityRule`, `FeatureRule`, `RoomFreeRule`, `AvailabilityRule`, `NoConflictRule`; `Schedule` (read-only snapshot of existing events and availability that the rules check against); `SchedulingService` (context). Files: `application/scheduling/*.java`. |
+| Collaboration | For each candidate, `SchedulingService` applies the room rules in the order capacity, features, room free. The first failure rejects the candidate for its room. If the room passes, it applies every invitee rule to each invitee to build the eligible list and the ineligible reasons (an invitee who fails both rules gets both reasons, joined by `; `), then ranks the valid candidates. |
 | Benefits | Each rule is small and unit-tested on its own, including boundary cases. The reasons shown to the organizer come straight from the rules. CR-01 adds a `ClosureRule` without changing the ranking code. The order of the list fixes the "room failures first" counting rule. |
 | Costs | Five or six small classes instead of one method, and an extra layer to follow when reading `suggest`. Rules must not depend on each other. |
 | Simpler alternative | One `suggest` method with an if-chain per rule. It's fine for a fixed rule set, but every new rule (closures in P3) edits the most complex method, and the reasons have to be built by hand in several places. |
-| Planned tests | One test class per rule with boundary values (capacity equal to invitees, adjacent 13:00–14:00 and 14:00–15:00). `SchedulingServiceTest` covers the brief's acceptance table: five of six eligible, minimum six, room too small, accepted elsewhere, and the tie-break order. |
+| Tests | One test class per rule with boundary values: `CapacityRuleTest` (capacity equal to invitees, one short), `FeatureRuleTest`, `RoomFreeRuleTest` (adjacent 12:00-13:00 and 14:00-15:00 allowed, four kinds of overlap rejected), `AvailabilityRuleTest`, `NoConflictRuleTest` (adjacent accepted event allowed; PENDING and DECLINED ignored). `SchedulingServiceTest` covers the brief's acceptance table: five of six eligible, minimum six, room too small, adjacent reservations, accepted elsewhere, the tie-break order and 10 repeated searches, plus opening-hour boundaries and the no-result counts. `CampusPlanCliSuggestionAcceptanceTest` checks the explanation printed by the CLI. |
 
 ### 3.3 Patterns already in the P1 code
 
@@ -462,7 +499,7 @@ classDiagram
 | **Alternatives** | 1. Validate and store directly in the CLI handlers. It's the fastest to write, but rules can only be tested by scripting the CLI, and a GUI would duplicate them. 2. Use a UI framework with built-in binding and validation (JavaFX properties). This ties the rules to the framework. 3. Four layers, with rules in self-validating domain records and services (chosen). |
 | **Decision** | Use four packages: `ui`, `application`, `domain` and `persistence`. Field rules live in the domain record constructors, so an invalid record cannot exist. Rules that span records live in the services. The CLI only parses text (dates, numbers, comma lists), calls a service and prints the result or the `Error:` message. |
 | **Consequences** | Every rule is covered by unit tests that never start the CLI. A GUI could reuse every service unchanged. Parsing text (for example "9am") is still the CLI's job, so the acceptance tests cover those messages. There are more classes than in a CLI-only design. |
-| **Validation evidence** | `StudentServiceTest`, `AvailabilityServiceTest` and `EventServiceTest` run without the UI. The domain package has no `java.io` or `java.nio` imports. Domain coverage is 98.2% and application coverage 96.8% of lines (`docs/test-report/coverage/`). The CLI acceptance tests drive the same services through text input. |
+| **Validation evidence** | `StudentServiceTest`, `AvailabilityServiceTest` and `EventServiceTest` run without the UI. The domain package has no `java.io` or `java.nio` imports. Domain coverage is 98.2% and application coverage 96.8% of lines (`docs/test-report/coverage/`). `SchedulingServiceTest` and the rule tests also run without the UI. The CLI acceptance tests drive the same services through text input. |
 
 ### ADR-002: One versioned JSON file, atomic saves, fail closed on bad data
 

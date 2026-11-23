@@ -11,6 +11,7 @@ import com.campusplan.application.EventService;
 import com.campusplan.application.RoomService;
 import com.campusplan.application.SeedLoader;
 import com.campusplan.application.StudentService;
+import com.campusplan.application.scheduling.SchedulingService;
 import com.campusplan.persistence.InMemoryAvailabilityRepository;
 import com.campusplan.persistence.InMemoryEventRepository;
 import com.campusplan.persistence.InMemoryStudentRepository;
@@ -39,12 +40,16 @@ class CampusPlanCliAcceptanceTest {
      */
     private static String session(String... lines) {
         StudentService students = new StudentService(new InMemoryStudentRepository());
-        RoomService rooms = new RoomService(JsonRoomRepository.fromResource("/seed/rooms.json"));
-        AvailabilityService availability = new AvailabilityService(new InMemoryAvailabilityRepository(), students);
-        EventService events = new EventService(new InMemoryEventRepository(), students);
+        JsonRoomRepository catalogue = JsonRoomRepository.fromResource("/seed/rooms.json");
+        InMemoryAvailabilityRepository availabilityStore = new InMemoryAvailabilityRepository();
+        InMemoryEventRepository eventStore = new InMemoryEventRepository();
+        RoomService rooms = new RoomService(catalogue);
+        AvailabilityService availability = new AvailabilityService(availabilityStore, students);
+        EventService events = new EventService(eventStore, students);
+        SchedulingService scheduling = new SchedulingService(eventStore, catalogue, availabilityStore);
         ByteArrayOutputStream bytes = new ByteArrayOutputStream();
         BufferedReader in = new BufferedReader(new StringReader(String.join("\n", lines) + "\n"));
-        new CampusPlanCli(students, rooms, availability, events, SeedLoader.NONE, in,
+        new CampusPlanCli(students, rooms, availability, events, scheduling, SeedLoader.NONE, in,
                 new PrintStream(bytes, true, StandardCharsets.UTF_8)).run();
         return bytes.toString(StandardCharsets.UTF_8);
     }
