@@ -291,7 +291,7 @@ The common rules for every operation:
 ### 2.2 Scheduling (agreed for P2, FR-04 to FR-06)
 
 ```java
-public record Suggestion(String roomId, LocalDate date, LocalTime start, LocalTime end,
+public record Suggestion(String roomId, AvailabilityInterval slot,
                          List<String> eligible, Map<String, String> ineligibleReasons) { }
 
 public record SuggestionResult(List<Suggestion> top, int rejectedForRoom, int rejectedForAttendance) { }
