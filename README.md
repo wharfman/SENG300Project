@@ -1,6 +1,6 @@
 # CampusPlan SENG 300 Project
 
-CampusPlan is a menu-driven command-line application that helps a student society organizer plan study sessions, meetings and workshops. In release P1 the organizer can manage students, browse and filter the room catalogue, record each student's availability, and create and edit draft events. All data is saved to a local JSON file after every change.
+CampusPlan is a menu-driven command-line application that helps a student society organizer plan study sessions, meetings and workshops. In release P1 the organizer can manage students, browse and filter the room catalogue, record each student's availability, and create and edit draft events. So far in P2, the organizer can also get the top five rooms and times for a draft event, with who can and can't attend. All data is saved to a local JSON file after every change.
 
 ## Prerequisites
 
@@ -36,6 +36,7 @@ The main menu:
 | 5-6 | List rooms, or filter by minimum capacity and required features. |
 | 7-9 | Add, remove and view a student's availability. Dates are `YYYY-MM-DD`, times are `HH:MM` on the hour or half hour, between 08:00 and 22:00. |
 | 10-13 | Create, edit, view and list draft events. When editing, leave an answer blank to keep the current value, or type `NONE` to clear the required features. |
+| 14 | Suggest times for a draft event. Shows the top five room and time options (most people able to attend first, then earliest, then the closest-fitting room), with who can attend and why the others can't. If nothing works, it shows how many options failed because of the room and how many because too few people could come. Nothing is booked. |
 | 0 | Quit. Everything is already saved. |
 
 Errors are printed as one `Error:` line and the menu is shown again; a rejected action never changes saved data.
@@ -89,7 +90,7 @@ If a save fails, for example because the folder is read-only, the change is not 
 
 ## Known limitations
 
-- **P1 scope.** Scheduling suggestions, confirming and cancelling events, attendance responses, roster export and undo/redo are planned for P2 (see `docs/plan.md`). Events can only be in `DRAFT` status for now.
+- **P2 in progress.** Scheduling suggestions (FR-04) are done. Confirming and cancelling events, attendance responses, roster export and undo/redo are still planned for P2 (see `docs/plan.md`). Events can only be in `DRAFT` status for now, so a suggestion can't be confirmed yet. The data file also doesn't store a scheduled event's room and time yet; FR-05 adds that.
 - **Rooms are read-only** from the app. They can only be changed by editing the JSON files.
 - **No way to delete students or events.** Physical deletion is out of scope in the brief.
 - **Non-ASCII text on Windows.** Data is always stored correctly as UTF-8, but the Windows console may show characters such as `李` as `?`, and typing them may not work, unless the console uses UTF-8 (run `chcp 65001` first).
@@ -104,6 +105,7 @@ CampusPlan uses a layered architecture. Each layer is a package under `com.campu
 |---|---|---|---|
 | UI | `ui` | Menu-driven command-line interface | `CampusPlanCli`, `CorruptDataPrompt` |
 | Application | `application` | Use cases and rules that span many records, such as ID assignment, unique emails and invitees existing | `StudentService`, `RoomService`, `AvailabilityService`, `EventService`, `SeedLoader` |
+| Application | `application.scheduling` | Scheduling suggestions: the room and invitee rules (Strategy pattern) and the ranking | `SchedulingService`, `Suggestion`, `SuggestionResult`, `Schedule`, `RoomRule`, `InviteeRule` and the five rule classes |
 | Domain | `domain` | Immutable records that enforce their own rules | `Student`, `Room`, `AvailabilityInterval`, `Availability`, `EventDetails`, `Event`, `ValidationException` |
 | Persistence | `persistence` | Storage interfaces and their implementations | `StudentRepository`, `RoomRepository`, `AvailabilityRepository`, `EventRepository`, the `InMemory*` test repositories, `JsonDataStore`, `JsonRoomRepository`, `StorageException` |
 
