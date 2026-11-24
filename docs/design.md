@@ -1,6 +1,6 @@
 # CampusPlan Design (P1)
 
-This document describes the delivered P1 code (FR-01 to FR-03), the P2 scheduling suggestions delivered so far (FR-04), and the contracts the team agreed for the rest of P2. Every class in section 1 exists in `src/main/java`. Section 2 marks which operations are delivered and which are agreed for later releases.
+This document describes the delivered P1 code (FR-01 to FR-03), the P2 work delivered so far (FR-04 suggestions, FR-05 scheduling and cancelling), and the contracts the team agreed for the rest of P2. Every class in section 1 exists in `src/main/java`. Section 2 marks which operations are delivered and which are agreed for later releases.
 
 ## 1. Architecture
 
@@ -59,6 +59,8 @@ classDiagram
         }
         class SchedulingService {
             +suggest(eventId) SuggestionResult
+            +confirm(eventId, chosen) Event
+            +cancel(eventId) Event
         }
         class SuggestionResult {
             <<record>>
@@ -134,6 +136,8 @@ classDiagram
             slot
             +draft(id, details)$ Event
             +withDetails(details) Event
+            +schedule(roomId, slot) Event
+            +cancel() Event
         }
         class EventStatus {
             <<enumeration>>
@@ -253,7 +257,7 @@ There are two exception types. Both are unchecked, and both carry a message writ
 
 | Exception | Thrown by | Meaning | Handled by |
 |---|---|---|---|
-| `ValidationException` (domain) | Domain record constructors, `Availability.without`, `Event.withDetails`, services | Input breaks a rule, or an ID does not exist | `CampusPlanCli` prints `Error: <message>` and shows the menu again. Nothing was stored. |
+| `ValidationException` (domain) | Domain record constructors, `Availability.without`, `Event.withDetails`, `Event.schedule`, `Event.cancel`, services | Input breaks a rule, or an ID does not exist | `CampusPlanCli` prints `Error: <message>` and shows the menu again. Nothing was stored. |
 | `StorageException` (persistence) | `JsonDataStore`, `JsonRoomRepository` | A file is missing, corrupt, or could not be written | At startup, `Main` exits for a bad catalogue, or asks `CorruptDataPrompt` about a bad data file. During a session, `CampusPlanCli` prints `Error: <message>`; the store has already undone the change in memory. |
 
 A rejected operation never changes stored data, for two reasons:
@@ -273,16 +277,19 @@ All data is stored in one UTF-8 JSON file, by default `data/campusplan.json`:
 
 ```json
 {
-  "formatVersion": 1,
+  "formatVersion": 2,
   "rooms": [ { "id": "R01", "name": "Maple Hall 101", "capacity": 6, "features": ["WHITEBOARD"] } ],
   "students": [ { "id": "S001", "name": "Amira Castell", "email": "amira.castell@campusplan.example" } ],
   "availability": [ { "studentId": "S001", "intervals": [ { "date": "2026-11-02", "start": "09:00", "end": "11:00" } ] } ],
   "events": [ { "id": "E001", "title": "Capstone project meeting", "inviteeIds": ["S001", "S002"],
                 "firstDay": "2026-11-02", "lastDay": "2026-11-04", "durationMinutes": 120,
-                "requiredFeatures": ["WHITEBOARD"], "minimumAttendance": 2, "status": "DRAFT",
-                "responses": { "S001": "PENDING", "S002": "PENDING" } } ]
+                "requiredFeatures": ["WHITEBOARD"], "minimumAttendance": 2, "status": "SCHEDULED",
+                "responses": { "S001": "PENDING", "S002": "PENDING" },
+                "roomId": "R01", "slot": { "date": "2026-11-02", "start": "13:00", "end": "15:00" } } ]
 }
 ```
+
+`roomId` and `slot` are only written for a `SCHEDULED` event; drafts and cancelled events leave them out. Version 2 added these two fields. Version 1 files from P1 still load, and are written back as version 2 on the next save. A scheduled event whose room is not in the file's room list is rejected as corrupt.
 
 ## 2. Interface contracts
 
@@ -314,9 +321,9 @@ The common rules for every operation:
 
 `AvailabilityService` (also delivered) follows the same pattern: `add`, `remove`, `get` and `isAvailable` each take a student ID, a date, a start time and an end time. `add` and `remove` return the student's merged intervals after the change.
 
-### 2.2 Scheduling (FR-04 delivered; FR-05 and FR-06 agreed for P2)
+### 2.2 Scheduling (FR-04 and FR-05 delivered; FR-06 agreed for P2)
 
-`SchedulingService`, `Suggestion` and `SuggestionResult` are in `application.scheduling`. Only `suggest` is written so far. `confirm`, `cancel` and `respond` are what we agreed for FR-05 and FR-06.
+`SchedulingService`, `Suggestion` and `SuggestionResult` are in `application.scheduling`. `suggest`, `confirm` and `cancel` are written. `respond` is what we agreed for FR-06.
 
 ```java
 public record Suggestion(String roomId, AvailabilityInterval slot,
@@ -335,13 +342,13 @@ public class SchedulingService {
 | Operation | Input | Result | Validation failures |
 |---|---|---|---|
 | `suggest` (delivered) | ID of a `DRAFT` event | A candidate is one room and one start on a 30-minute boundary in the date window, ending by 22:00. Up to 5 valid candidates, ranked by eligible count (highest first), then date and time, then fewest unused seats (room capacity minus invitees), then room ID. Both rejection counts are always set; a candidate that fails a room rule counts only as a room rejection, so the counts never overlap. If none qualify, `top` is empty. | `No event with ID E404.`; `Only DRAFT events can get suggestions; event E001 is SCHEDULED.` The result is read-only and reserves nothing. |
-| `confirm` | Event ID and a suggestion previously returned | Event with status `SCHEDULED`, its room and time, and the room reserved | The suggestion is no longer valid when checked again (room taken, attendance below minimum). Rejected with no change. |
-| `cancel` | ID of a `SCHEDULED` event | Event with status `CANCELLED`, reservation released, responses kept | Event is not `SCHEDULED`. The CLI asks for confirmation before calling this. |
+| `confirm` (delivered) | Event ID and a suggestion previously returned (only its room and time are used) | Event with status `SCHEDULED` and its room and time, saved in one write. Saving it is what reserves the room, because the room-free rule counts every `SCHEDULED` event. Responses are not changed; nobody is accepted automatically. | Checked in this order, and nothing is saved if any fails: the event exists and is a `DRAFT` (`Event E001 is CANCELLED and cannot be scheduled again.`); the room exists; the time fits the event's window and duration; then every room rule and the minimum attendance are checked again against the current data (`That suggestion is no longer valid: room booked for E101 at 13:30-14:30.`, `... only 2 of 4 invitees can attend, fewer than the minimum of 3.`). |
+| `cancel` (delivered) | ID of a `SCHEDULED` event | Event with status `CANCELLED`, responses and planning fields kept, room and time cleared, which releases the room and any accepted time | `Only SCHEDULED events can be cancelled; event E001 is DRAFT.` The CLI checks this and then asks the organizer to type `YES` before calling `cancel`. |
 | `respond` | Event ID, student ID, response | Event with the updated response | `ACCEPTED` when the student lacks full availability or has accepted an overlapping scheduled event; student is not an invitee |
 
-**Data ownership:** `SchedulingService` is built from the `EventRepository`, `RoomRepository` and `AvailabilityRepository`. `suggest` only reads them, through a read-only `Schedule` snapshot of the events and availability. The planned `confirm` and `respond` will write events only through `EventRepository.save`. `Suggestion` and `SuggestionResult` are immutable records owned by the caller; the CLI looks up student and room names for display.
+**Data ownership:** `SchedulingService` is built from the `EventRepository`, `RoomRepository` and `AvailabilityRepository`. `suggest` only reads them, through a read-only `Schedule` snapshot of the events and availability. `confirm` and `cancel` (and the planned `respond`) write events only through `EventRepository.save`, once per operation, after every check has passed. `Suggestion` and `SuggestionResult` are immutable records owned by the caller; the CLI looks up student and room names for display.
 
-`Event` has nullable fields `roomId` and `slot` (an `AvailabilityInterval` holding the date, start and end), which are set only when the status is `SCHEDULED`. These were added to the domain model for FR-04, so the rules can check scheduled events. FR-05 saves them: the data file format version goes to 2, and version 1 files still load, with those fields empty.
+`Event` has nullable fields `roomId` and `slot` (an `AvailabilityInterval` holding the date, start and end), which are set only when the status is `SCHEDULED`. They were added for FR-04 so the rules could check scheduled events, and FR-05 saves them in data file format version 2 (section 1.4). `Event.schedule` and `Event.cancel` make the two status changes, so the rule that only a draft can be scheduled and only a scheduled event can be cancelled lives in one place.
 
 ### 2.3 Storage (delivered in P1)
 

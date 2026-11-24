@@ -1,6 +1,6 @@
 # CampusPlan SENG 300 Project
 
-CampusPlan is a menu-driven command-line application that helps a student society organizer plan study sessions, meetings and workshops. In release P1 the organizer can manage students, browse and filter the room catalogue, record each student's availability, and create and edit draft events. So far in P2, the organizer can also get the top five rooms and times for a draft event, with who can and can't attend. All data is saved to a local JSON file after every change.
+CampusPlan is a menu-driven command-line application that helps a student society organizer plan study sessions, meetings and workshops. In release P1 the organizer can manage students, browse and filter the room catalogue, record each student's availability, and create and edit draft events. So far in P2, the organizer can also get the top five rooms and times for a draft event, with who can and can't attend, schedule the event in one of them, and cancel a scheduled event. All data is saved to a local JSON file after every change.
 
 ## Prerequisites
 
@@ -35,8 +35,10 @@ The main menu:
 | 1-4 | Add, edit, view and search students. Viewing a student also shows their availability by date. |
 | 5-6 | List rooms, or filter by minimum capacity and required features. |
 | 7-9 | Add, remove and view a student's availability. Dates are `YYYY-MM-DD`, times are `HH:MM` on the hour or half hour, between 08:00 and 22:00. |
-| 10-13 | Create, edit, view and list draft events. When editing, leave an answer blank to keep the current value, or type `NONE` to clear the required features. |
+| 10-13 | Create, edit, view and list events. Only drafts can be edited. When editing, leave an answer blank to keep the current value, or type `NONE` to clear the required features. Viewing a scheduled event also shows its room and time. |
 | 14 | Suggest times for a draft event. Shows the top five room and time options (most people able to attend first, then earliest, then the closest-fitting room), with who can attend and why the others can't. If nothing works, it shows how many options failed because of the room and how many because too few people could come. Nothing is booked. |
+| 15 | Schedule a draft event. Shows the same list as option 14, then you pick one by number (blank keeps it as a draft). The choice is checked again before it is saved, so if the room has been booked or too few people can come any more, you get an `Error:` and nothing changes. Scheduling books the room; nobody's response changes. |
+| 16 | Cancel a scheduled event. It shows the event and asks you to type `YES`; anything else leaves it as it was. A cancelled event keeps its responses, frees its room, and can't be scheduled again. |
 | 0 | Quit. Everything is already saved. |
 
 Errors are printed as one `Error:` line and the menu is shown again; a rejected action never changes saved data.
@@ -45,13 +47,13 @@ Errors are printed as one `Error:` line and the menu is shown again; a rejected 
 
 | Data | Location | Persistence |
 |---|---|---|
-| Students, availability, draft events and rooms | `data/campusplan.json` (relative to the folder you run from), or the path given as the first program argument | Saved as UTF-8 JSON after every change. The full path is printed at startup. |
+| Students, availability, events and rooms | `data/campusplan.json` (relative to the folder you run from), or the path given as the first program argument | Saved as UTF-8 JSON after every change. The full path is printed at startup. |
 | Built-in room catalogue | [src/main/resources/seed/rooms.json](src/main/resources/seed/rooms.json) | Read-only. Copied into the data file the first time something is saved. |
 | Sample datasets | [sample-data/](sample-data/) (also bundled in `src/main/resources/seed/`) | Read-only. Offered on first start. |
 
 The `data/` folder is in `.gitignore`, so personal data is never committed.
 
-The data file holds a `formatVersion` number (currently `1`) and one list each of rooms, students, availability and events. Dates are stored as `YYYY-MM-DD` and times as `HH:MM`, with no time zone. Saving writes a temporary file and then replaces the data file, so the file is never left half-written.
+The data file holds a `formatVersion` number (currently `2`) and one list each of rooms, students, availability and events. A scheduled event also has a `roomId` and a `slot` (date, start and end). Version 1 files from P1 still load and are saved as version 2 after the next change. Dates are stored as `YYYY-MM-DD` and times as `HH:MM`, with no time zone. Saving writes a temporary file and then replaces the data file, so the file is never left half-written.
 
 ## Seed data
 
@@ -90,7 +92,8 @@ If a save fails, for example because the folder is read-only, the change is not 
 
 ## Known limitations
 
-- **P2 in progress.** Scheduling suggestions (FR-04) are done. Confirming and cancelling events, attendance responses, roster export and undo/redo are still planned for P2 (see `docs/plan.md`). Events can only be in `DRAFT` status for now, so a suggestion can't be confirmed yet. The data file also doesn't store a scheduled event's room and time yet; FR-05 adds that.
+- **P2 in progress.** Suggestions (FR-04) and scheduling and cancelling (FR-05) are done. Attendance responses, roster export and undo/redo are still planned for P2 (see `docs/plan.md`), so every response stays `PENDING` for now, and the event list doesn't show rooms and times yet.
+- **A cancelled event forgets its room and time.** Only scheduled events keep them, so viewing a cancelled event doesn't show where it was going to be.
 - **Rooms are read-only** from the app. They can only be changed by editing the JSON files.
 - **No way to delete students or events.** Physical deletion is out of scope in the brief.
 - **Non-ASCII text on Windows.** Data is always stored correctly as UTF-8, but the Windows console may show characters such as `李` as `?`, and typing them may not work, unless the console uses UTF-8 (run `chcp 65001` first).

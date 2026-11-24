@@ -111,6 +111,39 @@ public record Event(String id, EventDetails details, EventStatus status,
     }
 
     /**
+     * Returns a copy of this draft as SCHEDULED in the given room and time. Responses are kept
+     * as they are; nobody is accepted automatically.
+     *
+     * @param room    ID of the room to reserve
+     * @param time    the date and time to reserve
+     * @return the scheduled event, with the same ID
+     * @throws ValidationException if this event is not a draft, or the room or time is missing
+     */
+    public Event schedule(String room, AvailabilityInterval time) {
+        if (status == EventStatus.CANCELLED) {
+            throw new ValidationException("Event " + id + " is CANCELLED and cannot be scheduled again.");
+        }
+        if (status != EventStatus.DRAFT) {
+            throw new ValidationException("Only DRAFT events can be scheduled; event " + id + " is " + status + ".");
+        }
+        return new Event(id, details, EventStatus.SCHEDULED, responses, room, time);
+    }
+
+    /**
+     * Returns a copy of this scheduled event as CANCELLED. The room and time are released;
+     * the planning fields and every response are kept.
+     *
+     * @return the cancelled event, with the same ID
+     * @throws ValidationException if this event is not SCHEDULED
+     */
+    public Event cancel() {
+        if (status != EventStatus.SCHEDULED) {
+            throw new ValidationException("Only SCHEDULED events can be cancelled; event " + id + " is " + status + ".");
+        }
+        return new Event(id, details, EventStatus.CANCELLED, responses);
+    }
+
+    /**
      * Builds a PENDING response for every invitee.
      *
      * @param details the planning fields

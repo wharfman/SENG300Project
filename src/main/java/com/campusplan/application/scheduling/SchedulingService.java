@@ -2,7 +2,8 @@
  * SchedulingService.java
  *
  * Application-layer service that generates and ranks scheduling suggestions for a
- * draft event, applying the room and invitee rules to every candidate.
+ * draft event, applying the room and invitee rules to every candidate, confirms a
+ * chosen suggestion after checking it again, and cancels scheduled events.
  */
 package com.campusplan.application.scheduling;
 
@@ -29,8 +30,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Finds the best rooms and times for a draft event (FR-04). The search only reads storage
- * and reserves nothing.
+ * Finds the best rooms and times for a draft event (FR-04), schedules the one the organizer
+ * picks, and cancels scheduled events (FR-05). The search only reads storage and reserves
+ * nothing; confirming checks the choice against the same rules and the current data before saving it.
  *
  * <p>A candidate is one room and one start on a 30-minute boundary, within the date window
  * and opening hours. Room rules are applied in order and the first failure rejects the
@@ -81,16 +83,13 @@ public class SchedulingService {
      * @throws ValidationException if no event has the ID or the event is not a draft
      */
     public SuggestionResult suggest(String eventId) {
-        String trimmed = eventId == null ? "" : eventId.trim();
-        Event event = events.findById(trimmed)
-                .orElseThrow(() -> new ValidationException("No event with ID " + trimmed + "."));
+        Event event = find(eventId);
         if (event.status() != EventStatus.DRAFT) {
             throw new ValidationException("Only DRAFT events can get suggestions; event "
                     + event.id() + " is " + event.status() + ".");
         }
 
-        Schedule schedule = new Schedule(events.findAll(), availability.findAll().stream()
-                .collect(Collectors.toMap(Availability::studentId, Function.identity())));
+        Schedule schedule = snapshot();
         Map<String, Room> roomsById = new LinkedHashMap<>();
         rooms.findAll().forEach(room -> roomsById.put(room.id(), room));
         int invitees = event.details().inviteeIds().size();
@@ -100,7 +99,7 @@ public class SchedulingService {
         int rejectedForAttendance = 0;
         for (AvailabilityInterval slot : slots(event.details())) {
             for (Room room : roomsById.values()) {
-                if (failsRoomRule(event, room, slot, schedule)) {
+                if (roomFailure(event, room, slot, schedule).isPresent()) {
                     rejectedForRoom++;
                     continue;
                 }
@@ -122,6 +121,85 @@ public class SchedulingService {
     }
 
     /**
+     * Schedules a draft event in a suggested room and time, reserving the room. Showing a
+     * suggestion reserved nothing, so every rule is checked again against the current data
+     * first. Responses are not changed; eligible invitees are not accepted automatically.
+     *
+     * @param eventId ID of the event, ignoring surrounding whitespace
+     * @param chosen  a suggestion previously returned by {@link #suggest}; only its room and time are used
+     * @return the stored, scheduled event
+     * @throws ValidationException if the event is unknown or not a draft, the room is unknown, the time
+     *                             does not fit the event, or the suggestion is no longer valid; nothing is changed
+     */
+    public Event confirm(String eventId, Suggestion chosen) {
+        Event event = find(eventId);
+        AvailabilityInterval slot = chosen.slot();
+        // Checks the status first, so a cancelled event is reported as such rather than as a bad room.
+        Event scheduled = event.schedule(chosen.roomId(), slot);
+        Room room = rooms.findAll().stream()
+                .filter(r -> r.id().equals(chosen.roomId()))
+                .findFirst()
+                .orElseThrow(() -> new ValidationException("No room with ID " + chosen.roomId() + "."));
+        if (!slots(event.details()).contains(slot)) {
+            throw new ValidationException(slot.date() + " " + slot.start() + "-" + slot.end()
+                    + " is not a possible time for event " + event.id() + ".");
+        }
+
+        Schedule schedule = snapshot();
+        Optional<String> roomProblem = roomFailure(event, room, slot, schedule);
+        if (roomProblem.isPresent()) {
+            throw new ValidationException("That suggestion is no longer valid: " + roomProblem.get() + ".");
+        }
+        int eligible = explain(event, room, slot, schedule).eligibleCount();
+        int minimum = event.details().minimumAttendance();
+        if (eligible < minimum) {
+            throw new ValidationException("That suggestion is no longer valid: only " + eligible + " of "
+                    + event.details().inviteeIds().size() + " invitees can attend, fewer than the minimum of "
+                    + minimum + ".");
+        }
+        events.save(scheduled);
+        return scheduled;
+    }
+
+    /**
+     * Cancels a scheduled event, releasing its room and time. The record and every response
+     * are kept, and a cancelled event can never be scheduled again. The caller is responsible
+     * for asking the organizer to confirm first.
+     *
+     * @param eventId ID of the event, ignoring surrounding whitespace
+     * @return the stored, cancelled event
+     * @throws ValidationException if the event is unknown or not SCHEDULED; nothing is changed
+     */
+    public Event cancel(String eventId) {
+        Event cancelled = find(eventId).cancel();
+        events.save(cancelled);
+        return cancelled;
+    }
+
+    /**
+     * Looks up an event, ignoring surrounding whitespace in the ID.
+     *
+     * @param eventId the event ID as entered
+     * @return the event
+     * @throws ValidationException if no event has the ID
+     */
+    private Event find(String eventId) {
+        String trimmed = eventId == null ? "" : eventId.trim();
+        return events.findById(trimmed)
+                .orElseThrow(() -> new ValidationException("No event with ID " + trimmed + "."));
+    }
+
+    /**
+     * Takes a read-only snapshot of the current events and availability for the rules to check.
+     *
+     * @return the snapshot
+     */
+    private Schedule snapshot() {
+        return new Schedule(events.findAll(), availability.findAll().stream()
+                .collect(Collectors.toMap(Availability::studentId, Function.identity())));
+    }
+
+    /**
      * Every candidate time: each 30-minute start in the date window whose end is within opening hours.
      *
      * @param details the event's planning fields
@@ -140,16 +218,19 @@ public class SchedulingService {
     }
 
     /**
-     * Whether any room rule rejects the room at this time.
+     * The first room rule that rejects the room at this time, in rule order.
      *
      * @param event    the event being planned
      * @param room     the candidate room
      * @param slot     the candidate time
      * @param schedule what is already planned
-     * @return true if a room rule fails
+     * @return that rule's reason, or empty if every room rule passes
      */
-    private static boolean failsRoomRule(Event event, Room room, AvailabilityInterval slot, Schedule schedule) {
-        return ROOM_RULES.stream().anyMatch(rule -> rule.check(event, room, slot, schedule).isPresent());
+    private static Optional<String> roomFailure(Event event, Room room, AvailabilityInterval slot, Schedule schedule) {
+        return ROOM_RULES.stream()
+                .map(rule -> rule.check(event, room, slot, schedule))
+                .flatMap(Optional::stream)
+                .findFirst();
     }
 
     /**
