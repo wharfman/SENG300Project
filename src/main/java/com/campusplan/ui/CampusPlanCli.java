@@ -17,6 +17,7 @@ import com.campusplan.application.scheduling.SuggestionResult;
 import com.campusplan.domain.AvailabilityInterval;
 import com.campusplan.domain.Event;
 import com.campusplan.domain.EventDetails;
+import com.campusplan.domain.EventStatus;
 import com.campusplan.domain.Room;
 import com.campusplan.domain.RoomFeature;
 import com.campusplan.domain.Student;
@@ -66,6 +67,8 @@ public class CampusPlanCli {
              12. View event
              13. List events
              14. Suggest times for event
+             15. Schedule event from a suggestion
+             16. Cancel scheduled event
               0. Quit""";
 
     /** Student workflows. */
@@ -135,7 +138,9 @@ public class CampusPlanCli {
                     case "11" -> editEvent();
                     case "12" -> viewEvent();
                     case "13" -> listEvents();
-                    case "14" -> suggestTimes();
+                    case "14" -> showSuggestions(events.get(promptOrEmpty("Event ID")));
+                    case "15" -> scheduleEvent();
+                    case "16" -> cancelEvent();
                     default -> out.println("Unknown option: " + choice);
                 }
             } catch (ValidationException | StorageException e) {
@@ -305,6 +310,9 @@ public class CampusPlanCli {
         out.println("ID:                 " + event.id());
         out.println("Title:              " + d.title());
         out.println("Status:             " + event.status());
+        if (event.status() == EventStatus.SCHEDULED) {
+            out.println("Room and time:      " + formatBooking(event));
+        }
         out.println("Date window:        " + d.firstDay() + " to " + d.lastDay() + " (" + d.windowDays() + " days)");
         out.println("Duration:           " + d.durationMinutes() + " minutes");
         out.println("Required features:  " + formatFeatures(d.requiredFeatures()));
@@ -325,11 +333,14 @@ public class CampusPlanCli {
     }
 
     /**
-     * Prompts for a draft event ID and prints the top suggestions with who can and cannot attend,
-     * or, when none qualify, how many candidates were rejected and why.
+     * Prints the top suggestions for a draft event with who can and cannot attend, or, when none
+     * qualify, how many candidates were rejected and why.
+     *
+     * @param event the draft event
+     * @return the suggestions printed, in the order numbered; empty if none qualify
+     * @throws ValidationException if the event is not a draft
      */
-    private void suggestTimes() {
-        Event event = events.get(promptOrEmpty("Event ID"));
+    private List<Suggestion> showSuggestions(Event event) {
         SuggestionResult result = scheduling.suggest(event.id());
         int invitees = event.details().inviteeIds().size();
         if (result.top().isEmpty()) {
@@ -338,9 +349,9 @@ public class CampusPlanCli {
                     + result.rejectedForRoom());
             out.println("  Rejected for attendance (fewer than " + event.details().minimumAttendance()
                     + " eligible invitees): " + result.rejectedForAttendance());
-            return;
+            return result.top();
         }
-        Map<String, Room> roomsById = rooms.list().stream().collect(Collectors.toMap(Room::id, r -> r));
+        Map<String, Room> roomsById = roomsById();
         out.println("Top suggestions for " + event.id() + " " + event.details().title()
                 + " (nothing is reserved until an event is scheduled):");
         int rank = 1;
@@ -358,6 +369,69 @@ public class CampusPlanCli {
                         out.println("     " + id + " " + students.get(id).name() + ": " + reason));
             }
         }
+        return result.top();
+    }
+
+    /**
+     * Prompts for a draft event, shows its suggestions, and schedules the one the organizer picks.
+     * The choice is checked again when it is confirmed; a blank answer leaves the event as a draft.
+     */
+    private void scheduleEvent() {
+        Event event = events.get(promptOrEmpty("Event ID"));
+        List<Suggestion> shown = showSuggestions(event);
+        if (shown.isEmpty()) {
+            return;
+        }
+        String answer = promptOrEmpty("Suggestion to schedule (1-" + shown.size() + ", blank to leave it as a draft)");
+        if (answer.isBlank()) {
+            out.println("Nothing scheduled; " + event.id() + " is still a draft.");
+            return;
+        }
+        int pick = parseNumber(answer, "Suggestion number");
+        if (pick < 1 || pick > shown.size()) {
+            throw new ValidationException("Suggestion number must be 1-" + shown.size() + ".");
+        }
+        Event scheduled = scheduling.confirm(event.id(), shown.get(pick - 1));
+        out.println("Scheduled " + scheduled.id() + " " + scheduled.details().title() + " in " + formatBooking(scheduled) + ".");
+    }
+
+    /**
+     * Prompts for a scheduled event and cancels it after the organizer types YES. Any other
+     * answer changes nothing.
+     */
+    private void cancelEvent() {
+        Event event = events.get(promptOrEmpty("Event ID"));
+        // Rejects a draft or cancelled event before asking, without changing anything.
+        event.cancel();
+        out.println("Cancel " + event.id() + " " + event.details().title() + " in " + formatBooking(event) + "?");
+        out.println("Responses are kept, the room is released, and a cancelled event cannot be scheduled again.");
+        if (!"YES".equals(promptOrEmpty("Type YES to cancel it"))) {
+            out.println("Not cancelled; nothing changed.");
+            return;
+        }
+        Event cancelled = scheduling.cancel(event.id());
+        out.println("Cancelled " + cancelled.id() + " " + cancelled.details().title() + "; " + event.roomId() + " is free again.");
+    }
+
+    /**
+     * Every room in the catalogue, keyed by ID.
+     *
+     * @return rooms by ID
+     */
+    private Map<String, Room> roomsById() {
+        return rooms.list().stream().collect(Collectors.toMap(Room::id, r -> r));
+    }
+
+    /**
+     * Formats a scheduled event's room and time as {@code R01 Maple Hall 101, 2026-11-03 13:00-14:00}.
+     *
+     * @param event a SCHEDULED event
+     * @return the display text
+     */
+    private String formatBooking(Event event) {
+        AvailabilityInterval slot = event.slot();
+        return event.roomId() + " " + roomsById().get(event.roomId()).name() + ", "
+                + slot.date() + " " + slot.start() + "-" + slot.end();
     }
 
     /**
