@@ -2,8 +2,8 @@
  * SchedulingService.java
  *
  * Application-layer service that generates and ranks scheduling suggestions for a
- * draft event, applying the room and invitee rules to every candidate, and confirms
- * a chosen suggestion after checking it again.
+ * draft event, applying the room and invitee rules to every candidate, confirms a
+ * chosen suggestion after checking it again, and cancels scheduled events.
  */
 package com.campusplan.application.scheduling;
 
@@ -30,9 +30,9 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
- * Finds the best rooms and times for a draft event (FR-04) and schedules the one the
- * organizer picks (FR-05). The search only reads storage and reserves nothing; confirming
- * checks the choice against the same rules and the current data before saving it.
+ * Finds the best rooms and times for a draft event (FR-04), schedules the one the organizer
+ * picks, and cancels scheduled events (FR-05). The search only reads storage and reserves
+ * nothing; confirming checks the choice against the same rules and the current data before saving it.
  *
  * <p>A candidate is one room and one start on a 30-minute boundary, within the date window
  * and opening hours. Room rules are applied in order and the first failure rejects the
@@ -159,6 +159,21 @@ public class SchedulingService {
         }
         events.save(scheduled);
         return scheduled;
+    }
+
+    /**
+     * Cancels a scheduled event, releasing its room and time. The record and every response
+     * are kept, and a cancelled event can never be scheduled again. The caller is responsible
+     * for asking the organizer to confirm first.
+     *
+     * @param eventId ID of the event, ignoring surrounding whitespace
+     * @return the stored, cancelled event
+     * @throws ValidationException if the event is unknown or not SCHEDULED; nothing is changed
+     */
+    public Event cancel(String eventId) {
+        Event cancelled = find(eventId).cancel();
+        events.save(cancelled);
+        return cancelled;
     }
 
     /**

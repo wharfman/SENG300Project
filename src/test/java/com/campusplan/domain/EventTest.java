@@ -162,6 +162,35 @@ class EventTest {
     }
 
     @Test
+    @DisplayName("Given a SCHEDULED event with an ACCEPTED response, when it is cancelled, then it is CANCELLED with no room or time and every response kept")
+    void cancellingKeepsResponsesAndReleasesRoom() {
+        AvailabilityInterval slot = new AvailabilityInterval(DAY, LocalTime.of(13, 0), LocalTime.of(14, 0));
+        Event scheduled = new Event("E001", inviting("S001", "S002"), EventStatus.SCHEDULED,
+                Map.of("S001", AttendanceResponse.ACCEPTED, "S002", AttendanceResponse.PENDING), "R01", slot);
+
+        Event cancelled = scheduled.cancel();
+
+        assertEquals(EventStatus.CANCELLED, cancelled.status());
+        assertEquals(null, cancelled.roomId());
+        assertEquals(null, cancelled.slot());
+        assertEquals(scheduled.responses(), cancelled.responses());
+        assertEquals(scheduled.details(), cancelled.details());
+    }
+
+    @Test
+    @DisplayName("Given a DRAFT or CANCELLED event, when it is cancelled, then it is rejected")
+    void onlyScheduledEventsCanBeCancelled() {
+        Event draft = Event.draft("E001", inviting("S001", "S002"));
+        Event cancelled = new Event("E002", inviting("S001", "S002"), EventStatus.CANCELLED,
+                Map.of("S001", AttendanceResponse.PENDING, "S002", AttendanceResponse.PENDING));
+
+        ValidationException e = assertThrows(ValidationException.class, draft::cancel);
+
+        assertEquals("Only SCHEDULED events can be cancelled; event E001 is DRAFT.", e.getMessage());
+        assertThrows(ValidationException.class, cancelled::cancel);
+    }
+
+    @Test
     @DisplayName("Given a blank ID, missing details, or missing status, when an event is created, then it is rejected")
     void rejectsMissingFields() {
         assertThrows(ValidationException.class, () -> Event.draft(" ", inviting("S001", "S002")));

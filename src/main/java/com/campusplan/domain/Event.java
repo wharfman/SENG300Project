@@ -130,6 +130,20 @@ public record Event(String id, EventDetails details, EventStatus status,
     }
 
     /**
+     * Returns a copy of this scheduled event as CANCELLED. The room and time are released;
+     * the planning fields and every response are kept.
+     *
+     * @return the cancelled event, with the same ID
+     * @throws ValidationException if this event is not SCHEDULED
+     */
+    public Event cancel() {
+        if (status != EventStatus.SCHEDULED) {
+            throw new ValidationException("Only SCHEDULED events can be cancelled; event " + id + " is " + status + ".");
+        }
+        return new Event(id, details, EventStatus.CANCELLED, responses);
+    }
+
+    /**
      * Builds a PENDING response for every invitee.
      *
      * @param details the planning fields
