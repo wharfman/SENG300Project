@@ -9,10 +9,12 @@ package com.campusplan.persistence;
 import com.campusplan.application.AvailabilityService;
 import com.campusplan.application.EventService;
 import com.campusplan.application.StudentService;
+import com.campusplan.domain.AttendanceResponse;
 import com.campusplan.domain.Availability;
 import com.campusplan.domain.AvailabilityInterval;
 import com.campusplan.domain.Event;
 import com.campusplan.domain.EventDetails;
+import com.campusplan.domain.EventStatus;
 import com.campusplan.domain.Room;
 import com.campusplan.domain.RoomFeature;
 import com.campusplan.domain.Student;
@@ -30,6 +32,7 @@ import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
@@ -97,6 +100,76 @@ class JsonDataStoreTest {
         assertEquals(store.availability().findAll(), reopened.availability().findAll());
         assertEquals(List.of(event), reopened.events().findAll());
         assertEquals(CATALOGUE, reopened.rooms().findAll());
+    }
+
+    @Test
+    @DisplayName("Given a scheduled event and a draft, when the store is reopened, then the room and time come back and the file is version 2 with no room or time for the draft")
+    void roundTripsScheduledEvent() throws IOException {
+        JsonDataStore store = JsonDataStore.open(file(), CATALOGUE);
+        StudentService students = new StudentService(store.students());
+        Student ada = students.create("Ada", "ada@example.com");
+        Student grace = students.create("Grace", "grace@example.com");
+        EventDetails details = new EventDetails("Project meeting", List.of(ada.id(), grace.id()), DAY, DAY, 60, Set.of(), 2);
+        Event scheduled = new Event("E001", details, EventStatus.SCHEDULED,
+                Map.of(ada.id(), AttendanceResponse.ACCEPTED, grace.id(), AttendanceResponse.PENDING),
+                "R01", new AvailabilityInterval(DAY, LocalTime.of(13, 0), LocalTime.of(14, 0)));
+        Event draft = Event.draft("E002", details);
+        store.events().save(scheduled);
+        store.events().save(draft);
+
+        JsonDataStore reopened = JsonDataStore.open(file(), List.of());
+
+        assertEquals(List.of(scheduled, draft), reopened.events().findAll());
+        String text = Files.readString(file(), StandardCharsets.UTF_8);
+        assertTrue(text.contains("\"formatVersion\" : 2"), text);
+        assertEquals(1, text.split("\"roomId\"", -1).length - 1, "only the scheduled event has a room");
+    }
+
+    @Test
+    @DisplayName("Given a version 1 data file, when the store is opened and something is saved, then it loads unchanged and is written back as version 2")
+    void loadsVersionOneFile() throws IOException {
+        writeFile("""
+                {"formatVersion":1,"rooms":[],
+                 "students":[{"id":"S001","name":"Ada","email":"ada@example.com"},
+                             {"id":"S002","name":"Grace","email":"grace@example.com"}],
+                 "availability":[],
+                 "events":[{"id":"E001","title":"Meeting","inviteeIds":["S001","S002"],
+                            "firstDay":"2026-11-02","lastDay":"2026-11-02","durationMinutes":60,
+                            "requiredFeatures":[],"minimumAttendance":2,"status":"DRAFT",
+                            "responses":{"S001":"PENDING","S002":"PENDING"}}]}""");
+
+        JsonDataStore store = JsonDataStore.open(file(), CATALOGUE);
+        Event event = store.events().findById("E001").orElseThrow();
+        new StudentService(store.students()).create("Alan", "alan@example.com");
+
+        assertEquals(EventStatus.DRAFT, event.status());
+        assertEquals(null, event.roomId());
+        assertTrue(Files.readString(file(), StandardCharsets.UTF_8).contains("\"formatVersion\" : 2"));
+        assertEquals(List.of(event), JsonDataStore.open(file(), List.of()).events().findAll());
+    }
+
+    @Test
+    @DisplayName("Given a scheduled event with an unknown room or with no room and time, when the store is opened, then it is rejected as corrupt")
+    void rejectsBadScheduledEvent() throws IOException {
+        String event = """
+                {"id":"E001","title":"Meeting","inviteeIds":["S001","S002"],
+                 "firstDay":"2026-11-02","lastDay":"2026-11-02","durationMinutes":60,
+                 "requiredFeatures":[],"minimumAttendance":2,"status":"SCHEDULED",
+                 "responses":{"S001":"PENDING","S002":"PENDING"}%s}""";
+        String file = """
+                {"formatVersion":2,"rooms":[{"id":"R01","name":"Lab","capacity":6,"features":[]}],
+                 "students":[{"id":"S001","name":"Ada","email":"ada@example.com"},
+                             {"id":"S002","name":"Grace","email":"grace@example.com"}],
+                 "availability":[],"events":[%s]}""";
+
+        writeFile(file.formatted(event.formatted(
+                ",\"roomId\":\"R99\",\"slot\":{\"date\":\"2026-11-02\",\"start\":\"13:00\",\"end\":\"14:00\"}")));
+        StorageException unknownRoom = assertThrows(StorageException.class, () -> JsonDataStore.open(file(), CATALOGUE));
+        writeFile(file.formatted(event.formatted("")));
+        StorageException noRoom = assertThrows(StorageException.class, () -> JsonDataStore.open(file(), CATALOGUE));
+
+        assertTrue(unknownRoom.getMessage().contains("Event E001 refers to unknown room R99."), unknownRoom.getMessage());
+        assertTrue(noRoom.getMessage().contains("Scheduled event E001 needs a room and a time."), noRoom.getMessage());
     }
 
     @Test

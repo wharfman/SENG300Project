@@ -16,6 +16,7 @@ import com.campusplan.domain.Room;
 import com.campusplan.domain.RoomFeature;
 import com.campusplan.domain.Student;
 import com.campusplan.domain.ValidationException;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -39,6 +40,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * All application data in one UTF-8 JSON file. Every change is written straight to disk.
@@ -47,7 +49,7 @@ import java.util.function.Function;
  *   <li>A missing file means an empty application: no students, availability, or events,
  *       and rooms from the built-in catalogue. No file is created until the first save.</li>
  *   <li>A file that cannot be parsed, has an unknown format version, or breaks a rule
- *       (invalid record, duplicate ID, reference to an unknown student) is reported as a
+ *       (invalid record, duplicate ID, reference to an unknown student or room) is reported as a
  *       {@link StorageException} and is never overwritten. The operator may {@link #setAside set it aside}.</li>
  *   <li>A save writes a temporary file and then moves it over the old one, so a failed save
  *       leaves the previous file intact. The change is also undone in memory and a
@@ -56,8 +58,14 @@ import java.util.function.Function;
  */
 public class JsonDataStore {
 
-    /** Version written to, and required in, every data file. */
-    public static final int FORMAT_VERSION = 1;
+    /**
+     * Version written to every data file. Version 2 adds the room and time of scheduled events;
+     * version 1 files, which have neither, still load.
+     */
+    public static final int FORMAT_VERSION = 2;
+
+    /** Oldest version that can still be loaded. */
+    private static final int OLDEST_FORMAT_VERSION = 1;
 
     /** Shared Jackson mapper; thread-safe once configured. */
     private static final ObjectMapper MAPPER = new ObjectMapper().enable(SerializationFeature.INDENT_OUTPUT);
@@ -334,9 +342,9 @@ public class JsonDataStore {
         if (json == null) {
             throw new StorageException(source + " is corrupt: expected a JSON object.");
         }
-        if (json.formatVersion() != FORMAT_VERSION) {
+        if (json.formatVersion() < OLDEST_FORMAT_VERSION || json.formatVersion() > FORMAT_VERSION) {
             throw new StorageException(source + " has unsupported format version " + json.formatVersion()
-                    + "; expected " + FORMAT_VERSION + ".");
+                    + "; expected " + OLDEST_FORMAT_VERSION + " to " + FORMAT_VERSION + ".");
         }
         try {
             Contents data = fromJson(json);
@@ -348,13 +356,15 @@ public class JsonDataStore {
     }
 
     /**
-     * Checks rules that span records: unique IDs and emails, and references to existing students.
+     * Checks rules that span records: unique IDs and emails, references to existing students,
+     * and scheduled events in existing rooms.
      *
      * @param data the parsed contents
      * @throws StorageException naming the first problem found
      */
     private static void checkConsistent(Contents data) {
         JsonRoomRepository.checkUnique(data.rooms());
+        Set<String> roomIds = data.rooms().stream().map(Room::id).collect(Collectors.toSet());
         Set<String> studentIds = unique(data.students(), Student::id, "student ID");
         unique(data.students(), Student::email, "student email");
         unique(data.availability(), Availability::studentId, "availability entry for student");
@@ -365,6 +375,9 @@ public class JsonDataStore {
         for (Event event : data.events()) {
             for (String invitee : event.details().inviteeIds()) {
                 requireStudent(studentIds, invitee, "Event " + event.id());
+            }
+            if (event.roomId() != null && !roomIds.contains(event.roomId())) {
+                throw new StorageException("Event " + event.id() + " refers to unknown room " + event.roomId() + ".");
             }
         }
     }
@@ -425,7 +438,10 @@ public class JsonDataStore {
             EventDetails details = new EventDetails(e.title(), e.inviteeIds(),
                     LocalDate.parse(e.firstDay()), LocalDate.parse(e.lastDay()),
                     e.durationMinutes(), e.requiredFeatures(), e.minimumAttendance());
-            events.add(new Event(e.id(), details, e.status(), e.responses() == null ? Map.of() : e.responses()));
+            AvailabilityInterval slot = e.slot() == null ? null : new AvailabilityInterval(
+                    LocalDate.parse(e.slot().date()), LocalTime.parse(e.slot().start()), LocalTime.parse(e.slot().end()));
+            events.add(new Event(e.id(), details, e.status(), e.responses() == null ? Map.of() : e.responses(),
+                    e.roomId(), slot));
         }
         return new Contents(orEmpty(json.rooms()), orEmpty(json.students()), availability, events);
     }
@@ -446,7 +462,9 @@ public class JsonDataStore {
                 .map(e -> new EventJson(e.id(), e.details().title(), e.details().inviteeIds(),
                         e.details().firstDay().toString(), e.details().lastDay().toString(),
                         e.details().durationMinutes(), e.details().requiredFeatures(),
-                        e.details().minimumAttendance(), e.status(), e.responses()))
+                        e.details().minimumAttendance(), e.status(), e.responses(), e.roomId(),
+                        e.slot() == null ? null : new IntervalJson(e.slot().date().toString(),
+                                e.slot().start().toString(), e.slot().end().toString())))
                 .toList();
         return new DataFileJson(FORMAT_VERSION, data.rooms(), data.students(), availability, events);
     }
@@ -480,9 +498,14 @@ public class JsonDataStore {
     record IntervalJson(String date, String start, String end) {
     }
 
-    /** One event in the data file, with ISO dates. */
+    /**
+     * One event in the data file, with ISO dates. The room and time are present only for a
+     * SCHEDULED event and are left out of the file otherwise.
+     */
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     record EventJson(String id, String title, List<String> inviteeIds, String firstDay, String lastDay,
                      int durationMinutes, Set<RoomFeature> requiredFeatures, int minimumAttendance,
-                     EventStatus status, Map<String, AttendanceResponse> responses) {
+                     EventStatus status, Map<String, AttendanceResponse> responses,
+                     String roomId, IntervalJson slot) {
     }
 }

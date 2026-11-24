@@ -174,3 +174,4 @@ Held at the end of week 6, before the P2 release.
 Changes agreed at the first P2 meeting are recorded here with the date.
 
 - **22 November 2026:** FR-04 (suggestions) reassigned from Ethan Bryant to Gavin Kyle.
+- **23 November 2026:** FR-05 (confirm and cancel) reassigned from Matthew Hajas to Gavin Kyle.
