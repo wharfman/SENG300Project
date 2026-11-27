@@ -10,9 +10,12 @@ import com.campusplan.domain.Event;
 import com.campusplan.domain.EventDetails;
 import com.campusplan.domain.ValidationException;
 import com.campusplan.persistence.EventRepository;
+import com.campusplan.domain.EventStatus;
 
 import java.util.Comparator;
 import java.util.List;
+import java.time.LocalDate;
+
 
 /**
  * Event operations used by the user interface. Field rules are checked by {@link EventDetails}
@@ -91,6 +94,32 @@ public class EventService {
         return repository.findAll().stream()
                 .sorted(Comparator.comparing((Event e) -> e.details().firstDay()).thenComparing(Event::id))
                 .toList();
+    }
+
+    /**
+    * Returns events matching the selected date and status.
+    *
+    * @param date date to filter by, or null for all dates
+    * @param status status to filter by, or null for all statuses
+    * @return matching events, sorted
+    */
+    public List<Event> list(LocalDate date, EventStatus status) {
+        return list().stream()
+            .filter(event -> status == null || event.status() == status)
+            .filter(event -> date == null || matchesDate(event, date))
+            .toList();
+    }
+
+    /**
+    * Checks whether an event matches the selected date.
+    */
+    private boolean matchesDate(Event event, LocalDate date) {
+        if (event.status() == EventStatus.SCHEDULED) {
+            return event.slot().date().equals(date);
+        }
+
+        return !date.isBefore(event.details().firstDay())
+            && !date.isAfter(event.details().lastDay());
     }
 
     /**

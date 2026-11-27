@@ -322,13 +322,31 @@ public class CampusPlanCli {
                 out.printf("  %-5s %-30s %s%n", id, students.get(id).name(), response));
     }
 
-    /** Prints one line per event, sorted by first day and then ID, or a message if there are none. */
+    /** Lists events using optional date and status filters. */
     private void listEvents() {
-        List<Event> all = events.list();
+        String dateInput = promptOrEmpty("Date (YYYY-MM-DD, blank for all)");
+        LocalDate date = dateInput.isBlank() ? null : parseDate(dateInput);
+
+        String statusInput = promptOrEmpty(
+            "Status (DRAFT, SCHEDULED, CANCELLED, blank for all)");
+
+        EventStatus status = null;
+
+        if (!statusInput.isBlank()) {
+            try {
+                status = EventStatus.valueOf(statusInput.trim().toUpperCase(Locale.ROOT));
+            } catch (IllegalArgumentException e) {
+                throw new ValidationException("Invalid event status.");
+            }
+        }
+
+        List<Event> all = events.list(date, status);
+
         if (all.isEmpty()) {
             out.println("No events.");
             return;
         }
+
         all.forEach(e -> out.println(format(e) + "  (" + e.details().inviteeIds().size() + " invitees)"));
     }
 

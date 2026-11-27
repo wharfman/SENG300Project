@@ -188,7 +188,7 @@ class CampusPlanCliPlanningAcceptanceTest {
                 "10", "Odd length", "S001, S002", "2026-11-02", "", "45", "", "2",
                 "10", "Too many needed", "S001, S002", "2026-11-02", "", "60", "", "3",
                 "10", "Not a number", "S001, S002", "2026-11-02", "", "an hour",
-                "13", "0"));
+                "13", "", "", "0"));
 
         assertTrue(output.contains("Error: An event must invite 2-20 distinct students."));
         assertTrue(output.contains("Error: No student with ID S404."));
@@ -343,12 +343,71 @@ class CampusPlanCliPlanningAcceptanceTest {
         String output = session(withStudents(
                 "10", "Later", "S001, S002", "2026-11-05", "", "60", "", "2",
                 "10", "Sooner", "S001, S002, S003", "2026-11-02", "", "60", "", "2",
-                "13", "0"));
+                "13", "", "", "0"));
 
         // Only the event list prints invitee counts, so these lines come from option 13.
         int sooner = output.indexOf("E002  DRAFT  2026-11-02 to 2026-11-02  Sooner  (3 invitees)");
         int later = output.indexOf("E001  DRAFT  2026-11-05 to 2026-11-05  Later  (2 invitees)");
         assertTrue(sooner >= 0 && later > sooner, output);
+    }
+
+    @Test
+    @DisplayName("Given drafts on different dates, when filtered by date, then only matching events are listed")
+    void listsEventsFilteredByDate() {
+        String output = session(withStudents(
+            "10", "Later", "S001, S002", "2026-11-05", "", "60", "", "2",
+            "10", "Sooner", "S001, S002, S003", "2026-11-02", "", "60", "", "2",
+            "13", "2026-11-02", "", "0"));
+
+        assertTrue(output.contains("Sooner  (3 invitees)"));
+        assertFalse(output.contains("Later  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given a draft event, when filtered by status, then only matching events are listed")
+    void listsEventsFilteredByStatus() {
+        String output = session(withStudents(
+            "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+            "13", "", "scheduled", "0"));
+
+        assertTrue(output.contains("No events."));
+        assertFalse(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given date and status filters, when listing events, then both filters are applied")
+    void listsEventsWithCombinedFilters() {
+        String output = session(withStudents(
+            "10", "Later", "S001, S002", "2026-11-05", "", "60", "", "2",
+            "10", "Sooner", "S001, S002, S003", "2026-11-02", "", "60", "", "2",
+            "13", "2026-11-02", "draft", "0"));
+
+        assertTrue(output.contains("Sooner  (3 invitees)"));
+        assertFalse(output.contains("Later  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given an invalid date filter, when listing events, then an error is displayed")
+    void rejectsInvalidDateFilter() {
+        String output = session(withStudents(
+            "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+            "13", "2026-02-30",
+            "13", "", "", "0"));
+
+        assertTrue(output.contains("Error: Date must be a real date"));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given an invalid status filter, when listing events, then an error is displayed")
+    void rejectsInvalidStatusFilter() {
+        String output = session(withStudents(
+            "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+            "13", "", "UNKNOWN",
+            "13", "", "", "0"));
+
+        assertTrue(output.contains("Error: Invalid event status."));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
     }
 
     @Test
