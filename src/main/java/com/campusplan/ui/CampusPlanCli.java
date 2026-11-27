@@ -9,6 +9,7 @@ package com.campusplan.ui;
 import com.campusplan.application.AvailabilityService;
 import com.campusplan.application.EventService;
 import com.campusplan.application.RoomService;
+import com.campusplan.application.RosterExportService;
 import com.campusplan.application.SeedLoader;
 import com.campusplan.application.StudentService;
 import com.campusplan.application.scheduling.SchedulingService;
@@ -28,6 +29,8 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.io.UncheckedIOException;
+import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.format.DateTimeParseException;
@@ -69,6 +72,7 @@ public class CampusPlanCli {
              14. Suggest times for event
              15. Schedule event from a suggestion
              16. Cancel scheduled event
+             18. Export event roster
               0. Quit""";
 
     /** Student workflows. */
@@ -79,6 +83,8 @@ public class CampusPlanCli {
     private final AvailabilityService availability;
     /** Draft event workflows. */
     private final EventService events;
+    /** Event roster export workflows. */
+    private final RosterExportService rosterExporter;
     /** Scheduling suggestions. */
     private final SchedulingService scheduling;
     /** Offers sample data when the application starts empty. */
@@ -107,6 +113,7 @@ public class CampusPlanCli {
         this.rooms = rooms;
         this.availability = availability;
         this.events = events;
+        this.rosterExporter = new RosterExportService(events, students);
         this.scheduling = scheduling;
         this.seed = seed;
         this.in = in;
@@ -141,6 +148,7 @@ public class CampusPlanCli {
                     case "14" -> showSuggestions(events.get(promptOrEmpty("Event ID")));
                     case "15" -> scheduleEvent();
                     case "16" -> cancelEvent();
+                    case "18" -> exportRoster();
                     default -> out.println("Unknown option: " + choice);
                 }
             } catch (ValidationException | StorageException e) {
@@ -348,6 +356,25 @@ public class CampusPlanCli {
         }
 
         all.forEach(e -> out.println(format(e) + "  (" + e.details().inviteeIds().size() + " invitees)"));
+    }
+
+    /** Prompts for an event ID and exports its roster to a CSV file. */
+    private void exportRoster() {
+        String eventId = promptOrEmpty("Event ID");
+        String destination = promptOrEmpty("Destination file");
+
+        if (destination.isBlank()) {
+            throw new ValidationException("Destination file is required.");
+        }
+
+        try {
+            rosterExporter.exportRoster(eventId, Path.of(destination));
+            out.println("Event roster exported successfully.");
+        } catch (InvalidPathException e) {
+            out.println("Error: Invalid destination path.");
+        } catch (IOException e) {
+            out.println("Error: Could not export roster: " + e.getMessage());
+        }
     }
 
     /**

@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -419,5 +420,106 @@ class CampusPlanCliPlanningAcceptanceTest {
         assertThrows(com.campusplan.persistence.StorageException.class, () -> session("0"));
 
         assertArrayEquals(original, Files.readAllBytes(file()));
+    }
+
+    @Test
+    @DisplayName("Given an existing event, when its roster is exported through the CLI, then the correct CSV file is created")
+    void exportsRosterThroughCli() throws IOException {
+        Path destination = dir.resolve("roster.csv");
+
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", destination.toString(),
+                "0"));
+
+        assertTrue(output.contains("Event roster exported successfully."));
+        assertTrue(Files.exists(destination));
+
+        String expected = "student_id,name,email,response\r\n"
+                + "S001,Ada Lovelace,ada@example.com,PENDING\r\n"
+                + "S002,Grace Hopper,grace@example.com,PENDING\r\n";
+
+        assertArrayEquals(
+                expected.getBytes(StandardCharsets.UTF_8),
+                Files.readAllBytes(destination));
+    }
+
+    @Test
+    @DisplayName("Given an unknown event ID, when exporting through the CLI, then no file is created")
+    void rejectsUnknownEventExport() {
+        Path destination = dir.resolve("roster.csv");
+
+        String output = session(withStudents(
+                "18", "E999", destination.toString(),
+                "0"));
+
+        assertTrue(output.contains("Error:"));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertFalse(Files.exists(destination));
+    }
+
+    @Test
+    @DisplayName("Given a blank destination, when exporting through the CLI, then a validation error is displayed")
+    void rejectsBlankExportDestination() {
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", "",
+                "13", "", "",
+                "0"));
+
+        assertTrue(output.contains("Error: Destination file is required."));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given a nonexistent destination directory, when exporting through the CLI, then an error is displayed")
+    void rejectsInvalidExportDestination() {
+        Path destination = dir.resolve("missing").resolve("roster.csv");
+
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", destination.toString(),
+                "13", "", "",
+                "0"));
+
+        assertTrue(output.contains("Error: Could not export roster:"));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertFalse(Files.exists(destination));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given an existing destination file, when exporting through the CLI, then its contents are preserved")
+    void preventsOverwritingThroughCli() throws IOException {
+        Path destination = dir.resolve("roster.csv");
+
+        Files.writeString(destination, "Original content",
+                StandardCharsets.UTF_8);
+
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", destination.toString(),
+                "0"));
+
+        assertTrue(output.contains("Error: Could not export roster:"));
+        assertFalse(output.contains("Event roster exported successfully."));
+
+        assertEquals("Original content",
+                Files.readString(destination, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("Given a malformed destination path, when exporting, then a path error is displayed")
+    void rejectsMalformedExportPath() {
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", "invalid\0path.csv",
+                "13", "", "",
+                "0"));
+
+        assertTrue(output.contains("Error: Invalid destination path."));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
     }
 }
