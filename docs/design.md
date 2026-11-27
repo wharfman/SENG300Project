@@ -1,6 +1,6 @@
 # CampusPlan Design (P1)
 
-This document describes the delivered P1 code (FR-01 to FR-03), the P2 work delivered so far (FR-04 suggestions, FR-05 scheduling and cancelling), and the contracts the team agreed for the rest of P2. Every class in section 1 exists in `src/main/java`. Section 2 marks which operations are delivered and which are agreed for later releases.
+This document describes the delivered P1 code (FR-01 to FR-03), the P2 work implemented so far (FR-04 suggestions, FR-05 scheduling and cancelling, FR-07 event filtering and roster export), and the contracts the team agreed for the rest of P2. Every class in section 1 exists in `src/main/java`. Section 2 marks which operations are delivered and which are agreed for later releases.
 
 ## 1. Architecture
 
@@ -9,7 +9,7 @@ CampusPlan has four layers, one package each under `com.campusplan`. Dependencie
 | Layer | Package | Responsibility | May depend on |
 |---|---|---|---|
 | Presentation | `ui` | Read operator input, print results and `Error:` lines | `application`, `domain` |
-| Application | `application`, `application.scheduling` | Use-case operations and rules that span several records (unique emails, invitees exist, ID generation, sorting, scheduling suggestions) | `persistence` interfaces, `domain` |
+| Application | `application`, `application.scheduling` | Use-case operations and rules that span several records (unique emails, invitees exist, ID generation, sorting, scheduling suggestions, event filtering and roster export) | `persistence` interfaces, `domain` |
 | Domain | `domain` | Immutable records that validate themselves (field limits, interval and merge rules, draft rules) | nothing |
 | Persistence | `persistence` | Repository interfaces, in-memory test implementations, and the JSON file store | `domain` |
 
@@ -50,6 +50,10 @@ classDiagram
             +edit(id, details) Event
             +get(id) Event
             +list() List~Event~
+            +list(date, status) List~Event~
+        }
+        class RosterExportService {
+            +exportRoster(eventId, destination)
         }
         class SeedLoader {
             <<interface>>
@@ -208,6 +212,7 @@ classDiagram
     CampusPlanCli --> RoomService
     CampusPlanCli --> AvailabilityService
     CampusPlanCli --> EventService
+    CampusPlanCli --> RosterExportService
     CampusPlanCli --> SeedLoader
     CampusPlanCli --> SchedulingService
     CampusPlanCli ..> ValidationException : catches
@@ -219,6 +224,8 @@ classDiagram
     AvailabilityService --> StudentService : student exists
     EventService --> EventRepository
     EventService --> StudentService : invitees exist
+    RosterExportService --> EventService : reads event
+    RosterExportService --> StudentService : reads invitees
     SchedulingService --> EventRepository
     SchedulingService --> RoomRepository
     SchedulingService --> AvailabilityRepository
@@ -253,12 +260,14 @@ classDiagram
 
 ### 1.2 Error handling
 
-There are two exception types. Both are unchecked, and both carry a message written for the operator.
+The application uses two unchecked exception types for validation and storage errors. Roster export also handles file I/O and invalid destination path exceptions.
 
 | Exception | Thrown by | Meaning | Handled by |
 |---|---|---|---|
 | `ValidationException` (domain) | Domain record constructors, `Availability.without`, `Event.withDetails`, `Event.schedule`, `Event.cancel`, services | Input breaks a rule, or an ID does not exist | `CampusPlanCli` prints `Error: <message>` and shows the menu again. Nothing was stored. |
 | `StorageException` (persistence) | `JsonDataStore`, `JsonRoomRepository` | A file is missing, corrupt, or could not be written | At startup, `Main` exits for a bad catalogue, or asks `CorruptDataPrompt` about a bad data file. During a session, `CampusPlanCli` prints `Error: <message>`; the store has already undone the change in memory. |
+| `IOException` (Java standard library) | `RosterExportService` | The destination file already exists or the CSV file could not be written | `CampusPlanCli` prints an export error and shows the menu again. Application records remain unchanged. |
+| `InvalidPathException` (Java standard library) | `Path.of` | The supplied export destination is not a valid path | `CampusPlanCli` prints `Error: Invalid destination path.` and shows the menu again. |
 
 A rejected operation never changes stored data, for two reasons:
 
@@ -269,7 +278,7 @@ A rejected operation never changes stored data, for two reasons:
 
 - **Domain objects never change.** Every domain object is an immutable Java record. Collections inside records (`inviteeIds`, `requiredFeatures`, `responses`, `intervals`) are copied into unmodifiable collections in the constructor, so a caller cannot change a stored record.
 - **The store owns the maps.** `JsonDataStore` and the in-memory repositories own the only mutable maps. `findAll` returns an unmodifiable copy.
-- **Services hold no data.** Services keep no state apart from their repository references, so they can be created per test.
+- **Services hold no application data.** Services keep references to repositories or other services rather than maintaining their own copies of application records, so they can be created per test. `RosterExportService` reads existing event and student records and builds the CSV locally for each export.
 
 ### 1.4 Data file
 
@@ -300,6 +309,7 @@ The common rules for every operation:
 - **IDs:** arguments are trimmed before lookup.
 - **Validation failures:** throw `ValidationException` and change nothing.
 - **Storage failures:** throw `StorageException` and change nothing.
+- **Export failures:** CSV file I/O failures throw `IOException`. Exporting does not change stored application records.
 - **Return values:** every result is an immutable record or an unmodifiable list.
 
 ### 2.1 Event planning (delivered in P1, `EventService`)
@@ -310,6 +320,7 @@ The common rules for every operation:
 | `edit(String id, EventDetails)` | Existing event ID and the complete new planning fields | Updated `Event` with the same ID and status. Kept invitees keep their response; added ones are `PENDING`. | Unknown ID; event is not `DRAFT`; unknown invitee |
 | `get(String id)` | Event ID | The `Event` | Unknown ID |
 | `list()` | – | All events, sorted by first day, then ID | – |
+| `list(LocalDate date, EventStatus status)` (FR-07) | Optional date and status; null means no filter | Matching events, sorted by first day, then ID | None; text input is validated by the CLI |
 
 `EventDetails` rejects:
 
@@ -390,6 +401,51 @@ public class CommandHistory {
 | Nothing to undo or redo | `undo()` or `redo()` throws `ValidationException("Nothing to undo.")` (or "Nothing to redo."). |
 | Saving | Each `execute` and `undo` saves through the repositories, so quitting after an undo keeps the restored state. History itself is not saved. |
 | Ownership | A command keeps the immutable records from before and after the change. Because records never change, keeping references is safe. |
+
+### 2.5 Event filtering and roster export (FR-07)
+
+Event filtering extends the existing `EventService`. The CLI accepts
+optional date and status filters through menu option 13. Blank inputs
+are passed to the service as null values.
+
+The date filter depends on the event status:
+
+- DRAFT: the selected date must fall within the event's planning window.
+- SCHEDULED: the selected date must match the actual scheduled date.
+- CANCELLED: the selected date must fall within the original planning window.
+
+Both ends of the planning window are inclusive. When both filters are
+provided, an event must satisfy both. The existing ordering by first
+day and then event ID is retained.
+
+The existing event details operation (menu option 12) is reused.
+
+`RosterExportService` is in the application package and is constructed
+with `EventService` and `StudentService`.
+
+| Operation | Input | Result | Failures |
+|---|---|---|---|
+| `exportRoster(String eventId, Path destination)` | Existing event ID and destination file path | Creates a UTF-8 CSV file containing every invitee and their current attendance response | Unknown event: `ValidationException`. Existing file or unwritable destination: `IOException`. |
+
+The CSV header is `student_id,name,email,response`. Invitees are
+exported in the order stored in the event. Fields containing commas,
+quotation marks, carriage returns or line feeds are enclosed in double
+quotes. Embedded double quotes are doubled. Records are separated by
+CRLF line endings.
+
+The service builds the CSV before writing it and uses `CREATE_NEW`
+to prevent overwriting existing files. The destination directory must
+already exist.
+
+**Data ownership:** Filtering and exporting only read application
+records. Neither operation calls a repository save method or changes
+event responses. They must remain outside the undo and redo history
+described in section 2.4.
+
+**Tests:** `EventServiceTest`, `RosterExportServiceTest` and
+`CampusPlanCliPlanningAcceptanceTest` cover filtering, date boundaries,
+CSV contents, escaping, UTF-8 encoding, attendance responses and
+invalid export destinations.
 
 ## 3. Design patterns
 
@@ -529,3 +585,14 @@ classDiagram
 | **Decision** | Use a `Command` interface (`execute`, `undo`, `describe`) and a `CommandHistory` with undo and redo stacks, as specified in section 2.4. Undo saves the `before` records through the same repositories, so the file is updated. A `CompositeCommand` groups the steps of one user action, for example scheduling an event and reserving its room, and undoes them in reverse order. |
 | **Consequences** | Each mutation needs a command, which is more classes. Because records are immutable, a command only keeps references, so 20+ operations cost almost no memory. Undo goes through the normal save path, so a failed save during undo is reported like any other storage error. |
 | **Validation evidence** | Planned for P2: `CommandHistoryTest` (undo after create, redo after undo, mutation clears redo, 20-operation limit, failed command not recorded) and an undo-after-scheduling test. The P1 tests already show that records are immutable (`EventTest`, `AvailabilityTest`) and that every save is written straight to disk (`JsonDataStoreTest#roundTripsAllData`). |
+
+### ADR-004: Keep event filtering and roster export in the application layer
+
+| | |
+|---|---|
+| **Status** | Accepted (P2, FR-07) |
+| **Context** | FR-07 requires event filtering by date and status, event details and UTF-8 CSV roster export. The existing CLI and application services already support event and student lookup. The new operations must remain testable without the CLI and must not change application records. |
+| **Alternatives** | 1. Implement filtering and CSV generation directly in the CLI. This requires fewer classes but mixes presentation with application logic. 2. Add both operations to `EventService`. This keeps the logic outside the CLI but introduces CSV formatting and file I/O responsibilities into the existing event service. 3. Extend `EventService` for filtering and introduce a separate `RosterExportService` for CSV export (chosen). |
+| **Decision** | Add an overloaded `EventService.list(date, status)` method and a separate `RosterExportService` that uses the existing event and student services. Scheduled events are filtered by their actual scheduled date, while drafts and cancelled events use their inclusive planning window. Export uses UTF-8 encoding and creates a new file without overwriting existing files. |
+| **Consequences** | The CLI remains responsible for input parsing and displaying results or errors. Filtering and export can be tested independently of the UI. The separate export service adds one class but avoids mixing CSV formatting with event management. Export does not change stored application data and must be excluded from undo and redo history. A failed write after file creation may leave an incomplete CSV file, but does not modify application records. |
+| **Validation evidence** | Eight new filtering unit tests in `EventServiceTest`, ten unit tests in `RosterExportServiceTest`, and eleven new CLI acceptance tests in `CampusPlanCliPlanningAcceptanceTest`. All 311 tests passed on the FR-07 feature branch on 2026-11-27. Manual verification covered event filtering, event details, CSV export, opening the CSV in Excel and rejection of an existing destination file. Implementation: issue #8, commits `b031e6e` and `80bbbfe`. |

@@ -33,6 +33,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -188,7 +189,7 @@ class CampusPlanCliPlanningAcceptanceTest {
                 "10", "Odd length", "S001, S002", "2026-11-02", "", "45", "", "2",
                 "10", "Too many needed", "S001, S002", "2026-11-02", "", "60", "", "3",
                 "10", "Not a number", "S001, S002", "2026-11-02", "", "an hour",
-                "13", "0"));
+                "13", "", "", "0"));
 
         assertTrue(output.contains("Error: An event must invite 2-20 distinct students."));
         assertTrue(output.contains("Error: No student with ID S404."));
@@ -343,12 +344,71 @@ class CampusPlanCliPlanningAcceptanceTest {
         String output = session(withStudents(
                 "10", "Later", "S001, S002", "2026-11-05", "", "60", "", "2",
                 "10", "Sooner", "S001, S002, S003", "2026-11-02", "", "60", "", "2",
-                "13", "0"));
+                "13", "", "", "0"));
 
         // Only the event list prints invitee counts, so these lines come from option 13.
         int sooner = output.indexOf("E002  DRAFT  2026-11-02 to 2026-11-02  Sooner  (3 invitees)");
         int later = output.indexOf("E001  DRAFT  2026-11-05 to 2026-11-05  Later  (2 invitees)");
         assertTrue(sooner >= 0 && later > sooner, output);
+    }
+
+    @Test
+    @DisplayName("Given drafts on different dates, when filtered by date, then only matching events are listed")
+    void listsEventsFilteredByDate() {
+        String output = session(withStudents(
+            "10", "Later", "S001, S002", "2026-11-05", "", "60", "", "2",
+            "10", "Sooner", "S001, S002, S003", "2026-11-02", "", "60", "", "2",
+            "13", "2026-11-02", "", "0"));
+
+        assertTrue(output.contains("Sooner  (3 invitees)"));
+        assertFalse(output.contains("Later  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given a draft event, when filtered by status, then only matching events are listed")
+    void listsEventsFilteredByStatus() {
+        String output = session(withStudents(
+            "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+            "13", "", "scheduled", "0"));
+
+        assertTrue(output.contains("No events."));
+        assertFalse(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given date and status filters, when listing events, then both filters are applied")
+    void listsEventsWithCombinedFilters() {
+        String output = session(withStudents(
+            "10", "Later", "S001, S002", "2026-11-05", "", "60", "", "2",
+            "10", "Sooner", "S001, S002, S003", "2026-11-02", "", "60", "", "2",
+            "13", "2026-11-02", "draft", "0"));
+
+        assertTrue(output.contains("Sooner  (3 invitees)"));
+        assertFalse(output.contains("Later  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given an invalid date filter, when listing events, then an error is displayed")
+    void rejectsInvalidDateFilter() {
+        String output = session(withStudents(
+            "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+            "13", "2026-02-30",
+            "13", "", "", "0"));
+
+        assertTrue(output.contains("Error: Date must be a real date"));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given an invalid status filter, when listing events, then an error is displayed")
+    void rejectsInvalidStatusFilter() {
+        String output = session(withStudents(
+            "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+            "13", "", "UNKNOWN",
+            "13", "", "", "0"));
+
+        assertTrue(output.contains("Error: Invalid event status."));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
     }
 
     @Test
@@ -360,5 +420,106 @@ class CampusPlanCliPlanningAcceptanceTest {
         assertThrows(com.campusplan.persistence.StorageException.class, () -> session("0"));
 
         assertArrayEquals(original, Files.readAllBytes(file()));
+    }
+
+    @Test
+    @DisplayName("Given an existing event, when its roster is exported through the CLI, then the correct CSV file is created")
+    void exportsRosterThroughCli() throws IOException {
+        Path destination = dir.resolve("roster.csv");
+
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", destination.toString(),
+                "0"));
+
+        assertTrue(output.contains("Event roster exported successfully."));
+        assertTrue(Files.exists(destination));
+
+        String expected = "student_id,name,email,response\r\n"
+                + "S001,Ada Lovelace,ada@example.com,PENDING\r\n"
+                + "S002,Grace Hopper,grace@example.com,PENDING\r\n";
+
+        assertArrayEquals(
+                expected.getBytes(StandardCharsets.UTF_8),
+                Files.readAllBytes(destination));
+    }
+
+    @Test
+    @DisplayName("Given an unknown event ID, when exporting through the CLI, then no file is created")
+    void rejectsUnknownEventExport() {
+        Path destination = dir.resolve("roster.csv");
+
+        String output = session(withStudents(
+                "18", "E999", destination.toString(),
+                "0"));
+
+        assertTrue(output.contains("Error:"));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertFalse(Files.exists(destination));
+    }
+
+    @Test
+    @DisplayName("Given a blank destination, when exporting through the CLI, then a validation error is displayed")
+    void rejectsBlankExportDestination() {
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", "",
+                "13", "", "",
+                "0"));
+
+        assertTrue(output.contains("Error: Destination file is required."));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given a nonexistent destination directory, when exporting through the CLI, then an error is displayed")
+    void rejectsInvalidExportDestination() {
+        Path destination = dir.resolve("missing").resolve("roster.csv");
+
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", destination.toString(),
+                "13", "", "",
+                "0"));
+
+        assertTrue(output.contains("Error: Could not export roster:"));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertFalse(Files.exists(destination));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
+    }
+
+    @Test
+    @DisplayName("Given an existing destination file, when exporting through the CLI, then its contents are preserved")
+    void preventsOverwritingThroughCli() throws IOException {
+        Path destination = dir.resolve("roster.csv");
+
+        Files.writeString(destination, "Original content",
+                StandardCharsets.UTF_8);
+
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", destination.toString(),
+                "0"));
+
+        assertTrue(output.contains("Error: Could not export roster:"));
+        assertFalse(output.contains("Event roster exported successfully."));
+
+        assertEquals("Original content",
+                Files.readString(destination, StandardCharsets.UTF_8));
+    }
+
+    @Test
+    @DisplayName("Given a malformed destination path, when exporting, then a path error is displayed")
+    void rejectsMalformedExportPath() {
+        String output = session(withStudents(
+                "10", "Meeting", "S001, S002", "2026-11-02", "", "60", "", "2",
+                "18", "E001", "invalid\0path.csv",
+                "13", "", "",
+                "0"));
+
+        assertTrue(output.contains("Error: Invalid destination path."));
+        assertFalse(output.contains("Event roster exported successfully."));
+        assertTrue(output.contains("Meeting  (2 invitees)"));
     }
 }

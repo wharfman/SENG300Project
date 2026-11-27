@@ -4,7 +4,7 @@ This file records generative AI use (required for every release) and the third-p
 
 ## 1. Generative AI use (P1 and P2)
 
-Each member records their own use. For each substantive use the brief asks for: member, date, tool and model, task or issue, prompt or faithful prompt summary, output used, affected files, changes made, and verification evidence. Exported transcripts of the chat sessions are submitted with the release (see section 1.3).
+Each member records their own use. For each substantive use the brief asks for: member, date, tool and model, task or issue, prompt or faithful prompt summary, output used, affected files, changes made, and verification evidence. Exported transcripts of the chat sessions are submitted with the release (see section 1.5).
 
 ### 1.1 Gavin Kyle
 
@@ -36,8 +36,6 @@ All uses below were in one Claude Code session with Claude Opus 5.5 (Anthropic),
 | 23 Nov | Review of FR-04 placeholders | Have the assumptions and placeholders made in FR-04, because FR-05 did not exist yet, been corrected now? | A list: the code workarounds were all resolved; five documentation passages still described FR-05 as missing; three open items belong to other features (FR-06 conflict rule, P2 sample file, unused-seats question). | None (corrected in the next step) | None | Search of the source and documentation. |
 | 23 Nov | FR-05 step 5: documentation | Do step 5, including the FR-04 corrections. | Generated documentation. | `docs/traceability.csv` (21 FR-05 rows and 2 FR-04 rows for the CLI booking examples), `README.md`, `docs/design.md`, `docs/plan.md`, `docs/test-report/test-strategy.md` | Committed as 509330d. Test and coverage reports left for the P2 release. | A script checked that every new test is traced and every test ID and file exists; `./mvnw test`: 282 tests, 0 failures. |
 
-
-
 ### 1.2 Omar Almishri
 
 All uses below were in one Claude Code session with Claude Opus 5.5 (Anthropic), on 26 October 2026, on branch `feat/FR-02-03`. Omar wrote the prompts and made the decisions noted under "Changes made". Claude read the project brief, `Requirements.pdf` and the existing code, wrote the code, tests and documents, and ran the builds and tests listed under "Verification".
@@ -64,7 +62,25 @@ Ethan Bryant | 26 October 2026 | I did not use generative AI for P1.
 
 ### 1.4 Matthew Hajas
 
+#### P1
+
 Matthew Hajas | 26 October 2026 | I did not use generative AI for P1.
+
+#### P2: FR-07
+
+All uses below were in a ChatGPT session with GPT-6.2 (OpenAI) on 27 November 2026, on branch `feat/FR-07`. ChatGPT reviewed the project brief, existing repository, code and documentation and provided implementation guidance, code, tests and documentation drafts in steps. Matthew applied the changes in VS Code, made implementation decisions, ran the tests and application locally, reviewed the changes and committed the work. Tests were run on Windows using JDK 22.0.2.
+
+| Date | Task / issue | Prompt (faithful summary) | Output used | Affected files | Changes made | Verification |
+|---|---|---|---|---|---|---|
+| 27 Nov | FR-07 planning (#8) | Review the project brief and repository, identify the remaining P2 requirements and work through FR-07 in steps. | Repository gap analysis, implementation plan, issue description and Git commands. | None | Matthew selected FR-07, created issue #8 and created branch `feat/FR-07`. | Baseline `mvnw.cmd clean test`: 282 tests, 0 failures. |
+| 27 Nov | FR-07 event filtering (#8) | Implement event filtering by date and status while retaining the existing event ordering. Add tests in steps. | Generated service code and unit tests. | `application/EventService.java`, `EventServiceTest` | Chose inclusive planning windows for draft and cancelled events, actual scheduled dates for scheduled events and optional filters. Retained existing sorting. | `mvnw.cmd test`: 290 tests, 0 failures. |
+| 27 Nov | FR-07 filtering CLI (#8) | Add date and status filtering to the existing event list menu and test valid and invalid inputs. | Generated CLI changes and acceptance tests. | `ui/CampusPlanCli.java`, `CampusPlanCliPlanningAcceptanceTest` | Kept menu option 13 and added optional prompts. Two existing acceptance test input sequences were updated after regression failures, retaining their original assertions. Committed with the filtering service as b031e6e. | `mvnw.cmd test`: 295 tests, 0 failures. |
+| 27 Nov | FR-07 event details (#8) | Review the existing event details implementation against FR-07 before making further changes. | Review of existing code and test coverage. | None | Retained the existing event details implementation rather than duplicating it or interfering with FR-06. | Existing automated tests and manual viewing of E002. |
+| 27 Nov | FR-07 roster export (#8) | Implement UTF-8 CSV roster export with correct escaping, attendance responses and tests for invalid exports. | Generated service code and ten unit tests. | `application/RosterExportService.java`, `RosterExportServiceTest` | Chose a separate application service, standard Java file operations, CRLF line endings, existing invitee order and prevention of overwriting existing files. | `mvnw.cmd test`: 305 tests, 0 failures. |
+| 27 Nov | FR-07 export CLI (#8) | Connect roster export to the CLI and add acceptance tests for successful and rejected exports. | Generated CLI changes and six acceptance tests. | `ui/CampusPlanCli.java`, `CampusPlanCliPlanningAcceptanceTest` | Selected menu option 18 to avoid planned FR-06 and FR-08 menu options. Added destination validation and error handling. | `mvnw.cmd clean test`: 311 tests, 0 failures, errors or skipped tests. |
+| 27 Nov | FR-07 verification (#8) | Review coverage, manually test FR-07 using the sample data and review the staged changes before committing. | Coverage analysis, manual test steps, Git commands and diff review. | FR-07 implementation and test files | Matthew ran the application, checked filtering and event details, exported the E002 roster, opened it in Excel and checked that an existing file could not be overwritten. Removed the temporary CSV and corrected trailing whitespace before committing as 80bbbfe. | 311 tests passed again. `RosterExportService` achieved 100% instruction and branch coverage. New filtering and export methods were fully covered. |
+| 27 Nov | FR-07 documentation (#8) | Update the documentation and traceability for FR-07 while following the existing team format and avoiding unnecessary changes. | Generated documentation drafts, traceability rows and ADR-004. | `README.md`, `docs/design.md`, `docs/plan.md`, `docs/traceability.csv`, `docs/test-report/test-strategy.md` | Added 31 traceability entries, documented the filtering and export design, updated the README and test strategy and marked FR-07 as done. Matthew chose to retain the original project schedule and defer release coverage reports and broader plan updates until final integration. Committed as 94877f8. | Reviewed Git diffs, checked the traceability row count and ran `git diff --check` with no errors. |
+| 27 Nov | FR-07 AI attribution (#8) | Document AI use in the same format as the existing P2 attribution entries. | Draft of this disclosure and transcript preparation guidance. | `attribution.md` | Recorded AI assistance, implementation decisions, affected files, commits and verification results. | Review against the conversation, Git history and local test results. |
 
 ### 1.5 Transcripts
 

@@ -14,17 +14,20 @@ import com.campusplan.domain.RoomFeature;
 import com.campusplan.domain.ValidationException;
 import com.campusplan.persistence.InMemoryEventRepository;
 import com.campusplan.persistence.InMemoryStudentRepository;
+import com.campusplan.domain.AvailabilityInterval;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /** {@link EventService} operations over in-memory storage, including rejected operations. */
 class EventServiceTest {
@@ -34,6 +37,7 @@ class EventServiceTest {
 
     /** Service under test, recreated empty for each test. */
     private EventService service;
+    private InMemoryEventRepository repository;
 
     /** Starts each test with three students, S001-S003, and no events. */
     @BeforeEach
@@ -42,7 +46,8 @@ class EventServiceTest {
         students.create("Ada", "ada@example.com");
         students.create("Grace", "grace@example.com");
         students.create("Alan", "alan@example.com");
-        service = new EventService(new InMemoryEventRepository(), students);
+        repository = new InMemoryEventRepository();
+        service = new EventService(repository, students);
     }
 
     /** Valid details with the given title and invitees. */
@@ -73,6 +78,109 @@ class EventServiceTest {
         Event earlyB = service.create(details("Early B", "S002", "S003"));
 
         assertEquals(List.of(earlyA, earlyB, later), service.list());
+    }
+
+    @Test
+    @DisplayName("Given existing events, when no filters are selected, then all events are returned")
+    void listsWithoutFilters() {
+        Event first = service.create(details("Meeting", "S001", "S002"));
+        Event second = service.create(details("Workshop", "S002", "S003"));
+
+        assertEquals(List.of(first, second), service.list(null, null));
+    }
+
+    @Test
+    @DisplayName("Given events with different date windows, when filtered by date, then only matching events are returned")
+    void filtersByDate() {
+        Event matching = service.create(details("Meeting", "S001", "S002"));
+
+        service.create(new EventDetails("Later", List.of("S001", "S002"),
+            DAY.plusDays(3), DAY.plusDays(3), 60, Set.of(), 2));
+
+        assertEquals(List.of(matching), service.list(DAY, null));
+    }
+
+    @Test
+    @DisplayName("Given an event date window, when filtered by date, then both boundaries are included")
+    void includesDateWindowBoundaries() {
+        Event event = service.create(new EventDetails(
+            "Meeting", List.of("S001", "S002"),
+            DAY, DAY.plusDays(2), 60, Set.of(), 2));
+
+        assertEquals(List.of(event), service.list(DAY, null));
+        assertEquals(List.of(event), service.list(DAY.plusDays(1), null));
+        assertEquals(List.of(event), service.list(DAY.plusDays(2), null));
+        assertTrue(service.list(DAY.minusDays(1), null).isEmpty());
+        assertTrue(service.list(DAY.plusDays(3), null).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given a draft event, when filtered by status, then only matching statuses are returned")
+    void filtersByStatus() {
+        Event event = service.create(details("Meeting", "S001", "S002"));
+
+        assertEquals(List.of(event), service.list(null, EventStatus.DRAFT));
+        assertTrue(service.list(null, EventStatus.SCHEDULED).isEmpty());
+        assertTrue(service.list(null, EventStatus.CANCELLED).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given date and status filters, when listing events, then both conditions must match")
+    void filtersByDateAndStatus() {
+        Event event = service.create(details("Meeting", "S001", "S002"));
+
+        assertEquals(List.of(event), service.list(DAY, EventStatus.DRAFT));
+        assertTrue(service.list(DAY, EventStatus.SCHEDULED).isEmpty());
+        assertTrue(service.list(DAY.minusDays(1), EventStatus.DRAFT).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given a scheduled event, when filtered by date, then only its scheduled date matches")
+    void filtersScheduledEventByActualDate() {
+        Event draft = service.create(details("Meeting", "S001", "S002"));
+
+        Event scheduled = draft.schedule("R001", new AvailabilityInterval(
+            DAY.plusDays(1), LocalTime.of(10, 0), LocalTime.of(11, 0)));
+
+        repository.save(scheduled);
+
+        assertEquals(List.of(scheduled),
+            service.list(DAY.plusDays(1), EventStatus.SCHEDULED));
+
+        assertTrue(service.list(DAY, EventStatus.SCHEDULED).isEmpty());
+        assertTrue(service.list(null, EventStatus.DRAFT).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given a cancelled event, when filtered by date, then its original date window is used")
+    void filtersCancelledEventByDateWindow() {
+        Event draft = service.create(details("Meeting", "S001", "S002"));
+
+        Event scheduled = draft.schedule("R001", new AvailabilityInterval(
+            DAY.plusDays(1), LocalTime.of(10, 0), LocalTime.of(11, 0)));
+
+        Event cancelled = scheduled.cancel();
+        repository.save(cancelled);
+
+        assertEquals(List.of(cancelled), service.list(DAY, EventStatus.CANCELLED));
+        assertEquals(List.of(cancelled), service.list(DAY.plusDays(1), EventStatus.CANCELLED));
+
+        assertTrue(service.list(DAY.plusDays(2), EventStatus.CANCELLED).isEmpty());
+        assertTrue(service.list(null, EventStatus.SCHEDULED).isEmpty());
+    }
+
+    @Test
+    @DisplayName("Given events created out of order, when filtered, then date and ID ordering is preserved")
+    void preservesSortingWithFilters() {
+        Event later = service.create(new EventDetails(
+            "Later", List.of("S001", "S002"),
+            DAY.plusDays(3), DAY.plusDays(3), 60, Set.of(), 2));
+
+        Event earlyA = service.create(details("Early A", "S001", "S002"));
+        Event earlyB = service.create(details("Early B", "S002", "S003"));
+
+        assertEquals(List.of(earlyA, earlyB, later),
+            service.list(null, EventStatus.DRAFT));
     }
 
     @Test

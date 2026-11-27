@@ -8,6 +8,8 @@
 | Unit | `AvailabilityIntervalTest`, `AvailabilityTest` | 30-minute boundaries, opening hours, start before end, half-open overlap, merging overlapping and touching intervals, removing and splitting, full coverage of an event |
 | Unit | `EventDetailsTest`, `EventTest` | Every draft limit on both sides (title, invitees, window, duration, minimum attendance), PENDING responses, responses kept on edit, only DRAFT editable, only a SCHEDULED event has a room and time, only a DRAFT can be scheduled and only a SCHEDULED event cancelled (responses kept both times) |
 | Unit | `StudentServiceTest`, `RoomServiceTest`, `AvailabilityServiceTest`, `EventServiceTest` | Application rules: ID assignment, duplicate emails, unknown students and events, sorting, and that every rejected operation leaves storage unchanged. Tested against the in-memory repositories. |
+| Unit | `EventServiceTest` (FR-07) | Optional date and status filters, combined filters, inclusive date window boundaries, actual scheduled dates, cancelled event date windows and preservation of existing event ordering |
+| Unit | `RosterExportServiceTest` | FR-07 CSV header and contents, escaping commas, quotation marks and line breaks, UTF-8 encoding, attendance responses, unknown events, invalid destinations, prevention of overwriting and preservation of application records |
 | Unit | `CapacityRuleTest`, `FeatureRuleTest`, `RoomFreeRuleTest`, `AvailabilityRuleTest`, `NoConflictRuleTest` | Each FR-04 scheduling rule on its own, with the reason it gives: capacity at and one below the invitee count, missing features named, adjacent bookings allowed and every kind of overlap rejected, full versus partial availability, ACCEPTED conflicts versus PENDING, DECLINED and adjacent events |
 | Unit | `SchedulingServiceTest` | FR-04 suggestion search over in-memory storage: every brief section 3 acceptance example, the full ranking order, the five-suggestion limit, 10 repeated searches giving the same result, opening-hour boundaries, the no-result counts, rejected searches, and that searching changes nothing |
 | Unit | `SchedulingServiceConfirmTest`, `SchedulingServiceCancelTest` | FR-05 over in-memory storage: confirming schedules and reserves the room without accepting anyone; stale choices (room booked since, too few eligible since) and invalid ones are rejected with every stored event unchanged; cancelling keeps the record and responses and frees the room and accepted time; cancelled events can't be scheduled again |
@@ -17,11 +19,12 @@
 | Integration | `SampleDataTest` | Both files in `sample-data/` load, meet the size rules, and have (or lack) a valid suggestion as documented |
 | Acceptance | `CampusPlanCliAcceptanceTest` | End-user scenarios from UC-02 and UC-03, run by typing operator input into the CLI and checking the printed output |
 | Acceptance | `CampusPlanCliPlanningAcceptanceTest` | UC-01 and UC-04 to UC-07 through the CLI over a real data file, including the P1 demo: add students, duplicate rejected, availability, room filter, draft, restart |
+| Acceptance | `CampusPlanCliPlanningAcceptanceTest` (FR-07) | Event filtering by date and status, combined filters, invalid filter inputs, CSV export through the CLI, invalid event IDs and destination paths, prevention of overwriting and continued CLI operation after rejected inputs |
 | Acceptance | `CampusPlanCliSuggestionAcceptanceTest` | FR-04 through the CLI over the seed catalogue: the explained suggestions, their ranked order, the no-result message with both counts, and an unknown event |
 | Acceptance | `CampusPlanCliSchedulingAcceptanceTest` | FR-05 through the CLI over a real data file: scheduling a picked suggestion, blank and bad choices, the brief's adjacent and overlapping bookings, scheduling twice, cancelling only after `YES`, the room freed after cancelling, and the booking surviving a restart |
 | Acceptance | `CorruptDataPromptTest` | The startup choice after a corrupt data file: quit by default, set aside only after YES |
 
-Acceptance tests are fully automated. Every CLI scenario covered so far can be scripted, so there are no manual test steps. A restart is tested by running two CLI sessions against the same data file.
+Acceptance tests are fully automated. Every CLI scenario covered so far can be scripted without manual intervention. A restart is tested by running two CLI sessions against the same data file. Supplementary manual verification was also performed for FR-07 using the sample dataset and opening an exported CSV roster in Excel.
 
 The FR-04 examples with an event that is already `SCHEDULED` are tested at the service level, and the adjacent and overlapping booking examples are also run through the CLI now that events can be scheduled. A student who accepted another event can only be set up at the service level until FR-06 adds responses.
 
@@ -40,6 +43,7 @@ The FR-04 examples with an event that is already `SCHEDULED` are tested at the s
   - Event titles of 1, 100 and 101 characters; 0, 1, 2, 20 and 21 invitees; windows of 1, 7 and 8 days.
   - Durations of -30, 0, 15, 30, 45, 90, 179, 180 and 210 minutes; minimum attendance of 0, 1, 2, n and n+1.
   - Scheduling: room capacity equal to the number of invitees and one less; a booking at 13:00-14:00 checked against 12:00-13:00 and 14:00-15:00 (allowed) and four overlapping times (rejected); availability that just covers the time or misses it by 30 minutes; the first (08:00) and last (21:00) start of the day for a 60-minute event; six valid options cut down to five.
+  - Event filtering: the first and last days of the planning window, dates outside the window, and the actual scheduled date compared with the original planning window.
 - **Invalid-input partitions.** Each kind of bad input gets at least one case:
   - Names: null, empty and blank.
   - Emails: no `@`, two `@`, nothing before or after the `@`, and internal whitespace.
@@ -48,10 +52,13 @@ The FR-04 examples with an event that is already `SCHEDULED` are tested at the s
   - Room catalogues that are malformed, empty, missing, or contain duplicates.
   - Times off a 30-minute boundary, with seconds, or in the wrong format; impossible dates.
   - Data files that are cut off, empty, `null`, an array, a newer format version, or that hold an invalid record, a duplicate, or a reference to a missing student.
+  - Event filtering: impossible dates and unknown event statuses.
+  - Roster export: unknown event IDs, blank destination paths, malformed paths, nonexistent destination directories and existing destination files.
 - **Normalisation cases.** Padded names, mixed-case emails, padded IDs and search queries, and features with mixed case, extra spaces or repeats.
 - **Failure leaves state unchanged.** Rejected adds and edits are followed by a check that no record was saved or changed, and that no ID was used up. Failed saves are forced by putting a folder where the temporary file goes, and the test checks the data file is byte-for-byte unchanged.
 - **Exact messages.** Acceptance tests check the exact `Error:` and result messages given in `Requirements.pdf`.
 - **Regression tests.** Every corrected defect gets a test, for example `CampusPlanCliAcceptanceTest#ignoresByteOrderMark`.
+- **CSV formatting.** Exact CSV contents are checked for the required header, invitee ordering, attendance responses, commas, embedded quotation marks, carriage returns, line feeds and UTF-8 characters.
 
 Each test has a Given/When/Then `@DisplayName` describing the scenario it checks.
 

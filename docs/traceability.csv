@@ -211,7 +211,37 @@ FR-05,CLI: cancelling a draft is rejected before asking for YES,,src/main/java/c
 FR-05,"CLI: after cancelling, the room is offered again at that time",,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliSchedulingAcceptanceTest#cancelFreesRoom,acceptance,P2,Pass
 FR-05,CLI: a scheduled event and its room booking survive a restart,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliSchedulingAcceptanceTest#bookingSurvivesRestart,acceptance,P2,Pass
 FR-06,"Record PENDING, ACCEPTED and DECLINED responses with conflict and availability rules",,,,planned,P2,Planned
-FR-07,List events by date and status; export roster CSV,,,,planned,P2,Planned
+FR-07,List all events when both filters are omitted,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#listsWithoutFilters,unit,P2,Pass
+FR-07,Filter events by date,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#filtersByDate,unit,P2,Pass
+FR-07,First and last days of the event window are included in date filtering,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#includesDateWindowBoundaries,unit,P2,Pass
+FR-07,Filter events by status,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#filtersByStatus,unit,P2,Pass
+FR-07,Apply date and status filters together,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#filtersByDateAndStatus,unit,P2,Pass
+FR-07,Scheduled events are filtered by their actual scheduled date,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#filtersScheduledEventByActualDate,unit,P2,Pass
+FR-07,Cancelled events are filtered by their original date window,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#filtersCancelledEventByDateWindow,unit,P2,Pass
+FR-07,Filtered events retain the existing first-day and ID ordering,#8,src/main/java/com/campusplan/application/EventService.java,EventServiceTest#preservesSortingWithFilters,unit,P2,Pass
+FR-07,CLI filters events by date,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#listsEventsFilteredByDate,acceptance,P2,Pass
+FR-07,CLI filters events by status and reports when no events match,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#listsEventsFilteredByStatus,acceptance,P2,Pass
+FR-07,CLI applies date and status filters together,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#listsEventsWithCombinedFilters,acceptance,P2,Pass
+FR-07,CLI rejects an invalid date filter and returns to the menu,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsInvalidDateFilter,acceptance,P2,Pass
+FR-07,CLI rejects an invalid status filter and returns to the menu,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsInvalidStatusFilter,acceptance,P2,Pass
+FR-07,"CSV contains the required student_id,name,email,response header and roster",#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#exportsBasicRoster,unit,P2,Pass
+FR-07,CSV fields containing commas are quoted correctly,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#escapesCommas,unit,P2,Pass
+FR-07,CSV fields containing quotation marks are escaped by doubling the quotation marks,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#escapesQuotationMarks,unit,P2,Pass
+FR-07,CSV fields containing carriage returns or line feeds are quoted correctly,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#escapesLineBreaks,unit,P2,Pass
+FR-07,CSV preserves Unicode characters using UTF-8 encoding,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#exportsUtf8Characters,unit,P2,Pass
+FR-07,Exporting an unknown event is rejected and no file is created,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#rejectsUnknownEvent,unit,P2,Pass
+FR-07,Export to a nonexistent destination directory is rejected without changing the event,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#rejectsInvalidDestination,unit,P2,Pass
+FR-07,Export does not overwrite an existing destination file,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#preventsOverwritingExistingFile,unit,P2,Pass
+FR-07,"CSV preserves ACCEPTED, DECLINED and PENDING attendance responses",#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#exportsAttendanceResponses,unit,P2,Pass
+FR-07,Successful export leaves application records unchanged,#8,src/main/java/com/campusplan/application/RosterExportService.java,RosterExportServiceTest#preservesApplicationData,unit,P2,Pass
+FR-07,CLI exports the selected event roster with the correct UTF-8 contents,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#exportsRosterThroughCli,acceptance,P2,Pass
+FR-07,CLI rejects export of an unknown event without creating a file,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsUnknownEventExport,acceptance,P2,Pass
+FR-07,CLI rejects a blank export destination and remains usable,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsBlankExportDestination,acceptance,P2,Pass
+FR-07,CLI reports an invalid destination directory and remains usable,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsInvalidExportDestination,acceptance,P2,Pass
+FR-07,CLI rejects overwriting an existing file and preserves its contents,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#preventsOverwritingThroughCli,acceptance,P2,Pass
+FR-07,CLI rejects malformed destination paths and remains usable,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#rejectsMalformedExportPath,acceptance,P2,Pass
+FR-07,Regression: existing event listing retains ordering and invitee counts,#8,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#listsEventsSortedWithInviteeCount,acceptance,P2,Pass
+FR-07,Regression: existing event details display retained,,src/main/java/com/campusplan/ui/CampusPlanCli.java,CampusPlanCliPlanningAcceptanceTest#editDraftKeepingBlankFields,acceptance,P2,Pass
 FR-08,Undo and redo at least 20 operations,,,,planned,P2,Planned
 FR-09,"CR-01 room closures, affected events, P2 file migration",,,,planned,P3,Planned
 FR-10,"CR-02 replacement plan preview, confirmation and undo",,,,planned,P3,Planned
