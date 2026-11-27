@@ -1,6 +1,6 @@
 # CampusPlan SENG 300 Project
 
-CampusPlan is a menu-driven command-line application that helps a student society organizer plan study sessions, meetings and workshops. In release P1 the organizer can manage students, browse and filter the room catalogue, record each student's availability, and create and edit draft events. So far in P2, the organizer can also get the top five rooms and times for a draft event, with who can and can't attend, schedule the event in one of them, and cancel a scheduled event. All data is saved to a local JSON file after every change.
+CampusPlan is a menu-driven command-line application that helps a student society organizer plan study sessions, meetings and workshops. In release P1 the organizer can manage students, browse and filter the room catalogue, record each student's availability, and create and edit draft events. So far in P2, the organizer can also get the top five rooms and times for a draft event, with who can and can't attend, schedule the event in one of them, and cancel a scheduled event. The organizer can also filter events by date and status, view event details, and export event rosters as CSV files. All data is saved to a local JSON file after every change.
 
 ## Prerequisites
 
@@ -35,13 +35,29 @@ The main menu:
 | 1-4 | Add, edit, view and search students. Viewing a student also shows their availability by date. |
 | 5-6 | List rooms, or filter by minimum capacity and required features. |
 | 7-9 | Add, remove and view a student's availability. Dates are `YYYY-MM-DD`, times are `HH:MM` on the hour or half hour, between 08:00 and 22:00. |
-| 10-13 | Create, edit, view and list events. Only drafts can be edited. When editing, leave an answer blank to keep the current value, or type `NONE` to clear the required features. Viewing a scheduled event also shows its room and time. |
+| 10-12 | Create, edit and view events. Only drafts can be edited. When editing, leave an answer blank to keep the current value, or type `NONE` to clear the required features. Viewing a scheduled event also shows its room and time. |
+| 13 | List events with optional date and status filters. Leave either filter blank to include all values. Scheduled events are filtered by their scheduled date; draft and cancelled events are filtered by their date window. |
 | 14 | Suggest times for a draft event. Shows the top five room and time options (most people able to attend first, then earliest, then the closest-fitting room), with who can attend and why the others can't. If nothing works, it shows how many options failed because of the room and how many because too few people could come. Nothing is booked. |
 | 15 | Schedule a draft event. Shows the same list as option 14, then you pick one by number (blank keeps it as a draft). The choice is checked again before it is saved, so if the room has been booked or too few people can come any more, you get an `Error:` and nothing changes. Scheduling books the room; nobody's response changes. |
 | 16 | Cancel a scheduled event. It shows the event and asks you to type `YES`; anything else leaves it as it was. A cancelled event keeps its responses, frees its room, and can't be scheduled again. |
+| 18 | Export an event roster as a UTF-8 CSV file. Enter the event ID and destination filename. Includes student IDs, names, emails and attendance responses. Existing files are not overwritten. |
 | 0 | Quit. Everything is already saved. |
 
 Errors are printed as one `Error:` line and the menu is shown again; a rejected action never changes saved data.
+
+### Exporting an event roster
+
+1. Select option 18.
+2. Enter the event ID, for example `E002`.
+3. Enter a destination filename, for example `roster.csv`.
+
+The CSV contains the columns `student_id,name,email,response` and
+includes all invited students and their current attendance responses.
+Commas, quotation marks and line breaks are escaped correctly.
+
+Relative paths are resolved from the application's working directory.
+The destination directory must already exist. Exporting a roster does
+not modify saved application data. Existing files are not overwritten.
 
 ## Data files
 
@@ -76,7 +92,7 @@ If the built-in catalogue is missing or breaks a rule, the app prints an `Error:
 
 ## Reset and backup
 
-CampusPlan only ever reads and writes the one data file, so backing up and resetting is done with ordinary file operations while the app is closed.
+CampusPlan stores its application data in one JSON file, so backing up and resetting is done with ordinary file operations while the app is closed.
 
 - **Back up:** copy `data/campusplan.json` somewhere else, for example `cp data/campusplan.json backup-2026-11-02.json` (`copy` in Windows Command Prompt).
 - **Restore a backup:** close CampusPlan, copy the backup over `data/campusplan.json`, and start again. The file is fully checked when it loads.
@@ -92,7 +108,7 @@ If a save fails, for example because the folder is read-only, the change is not 
 
 ## Known limitations
 
-- **P2 in progress.** Suggestions (FR-04) and scheduling and cancelling (FR-05) are done. Attendance responses, roster export and undo/redo are still planned for P2 (see `docs/plan.md`), so every response stays `PENDING` for now, and the event list doesn't show rooms and times yet.
+- **P2 in progress.** Suggestions (FR-04) and scheduling and cancelling (FR-05) are complete. Event filtering and roster export (FR-07) are implemented and tested on the feature branch. Attendance responses (FR-06) and undo/redo (FR-08) are pending integration.
 - **A cancelled event forgets its room and time.** Only scheduled events keep them, so viewing a cancelled event doesn't show where it was going to be.
 - **Rooms are read-only** from the app. They can only be changed by editing the JSON files.
 - **No way to delete students or events.** Physical deletion is out of scope in the brief.
@@ -107,7 +123,7 @@ CampusPlan uses a layered architecture. Each layer is a package under `com.campu
 | Layer | Package | Responsibility | Key classes |
 |---|---|---|---|
 | UI | `ui` | Menu-driven command-line interface | `CampusPlanCli`, `CorruptDataPrompt` |
-| Application | `application` | Use cases and rules that span many records, such as ID assignment, unique emails and invitees existing | `StudentService`, `RoomService`, `AvailabilityService`, `EventService`, `SeedLoader` |
+| Application | `application` | Use cases and rules that span many records, such as ID assignment, unique emails and invitees existing | `StudentService`, `RoomService`, `AvailabilityService`, `EventService`, `SeedLoader`, `RosterExportService` |
 | Application | `application.scheduling` | Scheduling suggestions: the room and invitee rules (Strategy pattern) and the ranking | `SchedulingService`, `Suggestion`, `SuggestionResult`, `Schedule`, `RoomRule`, `InviteeRule` and the five rule classes |
 | Domain | `domain` | Immutable records that enforce their own rules | `Student`, `Room`, `AvailabilityInterval`, `Availability`, `EventDetails`, `Event`, `ValidationException` |
 | Persistence | `persistence` | Storage interfaces and their implementations | `StudentRepository`, `RoomRepository`, `AvailabilityRepository`, `EventRepository`, the `InMemory*` test repositories, `JsonDataStore`, `JsonRoomRepository`, `StorageException` |
